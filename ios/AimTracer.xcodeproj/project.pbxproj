@@ -1,0 +1,345 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AA0000010000000000000001 /* AimTracerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000010000000000000001 /* AimTracerApp.swift */; };
+		AA0000010000000000000002 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000010000000000000002 /* AppModel.swift */; };
+		AA0000010000000000000003 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000010000000000000003 /* Models.swift */; };
+		AA0000010000000000000004 /* AimTracerBLEProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000010000000000000004 /* AimTracerBLEProtocol.swift */; };
+		AA0000010000000000000005 /* BLEManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000010000000000000005 /* BLEManager.swift */; };
+		AA0000010000000000000006 /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000010000000000000006 /* SessionStore.swift */; };
+		AA0000010000000000000007 /* MotionAnalysis.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000010000000000000007 /* MotionAnalysis.swift */; };
+		AA0000010000000000000008 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000010000000000000008 /* ContentView.swift */; };
+		AA0000010000000000000009 /* LiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000010000000000000009 /* LiveView.swift */; };
+		AA000001000000000000000A /* TraceViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000001000000000000000A /* TraceViews.swift */; };
+		AA000001000000000000000B /* ConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000001000000000000000B /* ConnectionView.swift */; };
+		AA000001000000000000000C /* SessionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000001000000000000000C /* SessionsView.swift */; };
+		AA000001000000000000000D /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000001000000000000000D /* SettingsView.swift */; };
+		AA000001000000000000000E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BB000001000000000000000E /* Assets.xcassets */; };
+		AA0000010000000000000011 /* SessionAnalysis.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000010000000000000011 /* SessionAnalysis.swift */; };
+		AA0000010000000000000012 /* SessionExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000010000000000000012 /* SessionExport.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		BB0000010000000000000001 /* AimTracerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AimTracerApp.swift; sourceTree = "<group>"; };
+		BB0000010000000000000002 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		BB0000010000000000000003 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		BB0000010000000000000004 /* AimTracerBLEProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AimTracerBLEProtocol.swift; sourceTree = "<group>"; };
+		BB0000010000000000000005 /* BLEManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEManager.swift; sourceTree = "<group>"; };
+		BB0000010000000000000006 /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
+		BB0000010000000000000007 /* MotionAnalysis.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionAnalysis.swift; sourceTree = "<group>"; };
+		BB0000010000000000000008 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		BB0000010000000000000009 /* LiveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveView.swift; sourceTree = "<group>"; };
+		BB000001000000000000000A /* TraceViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraceViews.swift; sourceTree = "<group>"; };
+		BB000001000000000000000B /* ConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionView.swift; sourceTree = "<group>"; };
+		BB000001000000000000000C /* SessionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsView.swift; sourceTree = "<group>"; };
+		BB000001000000000000000D /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		BB000001000000000000000E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		BB000001000000000000000F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		BB0000010000000000000010 /* AimTracer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AimTracer.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BB0000010000000000000011 /* SessionAnalysis.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionAnalysis.swift; sourceTree = "<group>"; };
+		BB0000010000000000000012 /* SessionExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionExport.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		CC0000010000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		DD0000010000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				DD0000010000000000000002 /* AimTracer */,
+				DD0000010000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		DD0000010000000000000002 /* AimTracer */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000010000000000000001 /* AimTracerApp.swift */,
+				BB0000010000000000000002 /* AppModel.swift */,
+				BB0000010000000000000003 /* Models.swift */,
+				BB0000010000000000000004 /* AimTracerBLEProtocol.swift */,
+				BB0000010000000000000005 /* BLEManager.swift */,
+				BB0000010000000000000006 /* SessionStore.swift */,
+				BB0000010000000000000007 /* MotionAnalysis.swift */,
+				BB0000010000000000000008 /* ContentView.swift */,
+				BB0000010000000000000009 /* LiveView.swift */,
+				BB000001000000000000000A /* TraceViews.swift */,
+				BB000001000000000000000B /* ConnectionView.swift */,
+				BB000001000000000000000C /* SessionsView.swift */,
+				BB000001000000000000000D /* SettingsView.swift */,
+				BB0000010000000000000011 /* SessionAnalysis.swift */,
+				BB0000010000000000000012 /* SessionExport.swift */,
+				BB000001000000000000000E /* Assets.xcassets */,
+				BB000001000000000000000F /* Info.plist */,
+			);
+			path = AimTracer;
+			sourceTree = "<group>";
+		};
+		DD0000010000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000010000000000000010 /* AimTracer.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		EE0000010000000000000001 /* AimTracer */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FF0000010000000000000002 /* Build configuration list for PBXNativeTarget "AimTracer" */;
+			buildPhases = (
+				CC0000010000000000000002 /* Sources */,
+				CC0000010000000000000001 /* Frameworks */,
+				CC0000010000000000000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AimTracer;
+			productName = AimTracer;
+			productReference = BB0000010000000000000010 /* AimTracer.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		EE0000010000000000000002 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2660;
+				LastUpgradeCheck = 2660;
+				TargetAttributes = {
+					EE0000010000000000000001 = {
+						CreatedOnToolsVersion = 26.6;
+					};
+				};
+			};
+			buildConfigurationList = FF0000010000000000000001 /* Build configuration list for PBXProject "AimTracer" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = DD0000010000000000000001;
+			productRefGroup = DD0000010000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				EE0000010000000000000001 /* AimTracer */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		CC0000010000000000000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA000001000000000000000E /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		CC0000010000000000000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA0000010000000000000001 /* AimTracerApp.swift in Sources */,
+				AA0000010000000000000002 /* AppModel.swift in Sources */,
+				AA0000010000000000000003 /* Models.swift in Sources */,
+				AA0000010000000000000004 /* AimTracerBLEProtocol.swift in Sources */,
+				AA0000010000000000000005 /* BLEManager.swift in Sources */,
+				AA0000010000000000000006 /* SessionStore.swift in Sources */,
+				AA0000010000000000000007 /* MotionAnalysis.swift in Sources */,
+				AA0000010000000000000008 /* ContentView.swift in Sources */,
+				AA0000010000000000000009 /* LiveView.swift in Sources */,
+				AA000001000000000000000A /* TraceViews.swift in Sources */,
+				AA000001000000000000000B /* ConnectionView.swift in Sources */,
+				AA000001000000000000000C /* SessionsView.swift in Sources */,
+				AA000001000000000000000D /* SettingsView.swift in Sources */,
+				AA0000010000000000000011 /* SessionAnalysis.swift in Sources */,
+				AA0000010000000000000012 /* SessionExport.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		110000010000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		110000010000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		110000010000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = AimTracer/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.4.1;
+				PRODUCT_BUNDLE_IDENTIFIER = de.aimtracer.mvp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		110000010000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = AimTracer/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.4.1;
+				PRODUCT_BUNDLE_IDENTIFIER = de.aimtracer.mvp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		FF0000010000000000000001 /* Build configuration list for PBXProject "AimTracer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				110000010000000000000001 /* Debug */,
+				110000010000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FF0000010000000000000002 /* Build configuration list for PBXNativeTarget "AimTracer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				110000010000000000000003 /* Debug */,
+				110000010000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = EE0000010000000000000002 /* Project object */;
+}
