@@ -8,8 +8,9 @@ aiming point nor a score.
 
 ## Programs
 
-Four programs are available when starting a session:
+Five programs are available when starting a session:
 
+- `LP20` with 20 planned shots,
 - `LP40` with 40 planned shots,
 - `LP60` with 60 planned shots,
 - dry-fire training without a fixed shot count,
@@ -29,6 +30,9 @@ RMS = sqrt(mean(gx² + gy² + gz²))
 ```
 
 Lower values indicate less angular movement in the evaluated time window.
+Because all three axes contribute to the magnitude, the fixed mounting-axis
+transform does not change these RMS metrics. It does determine the visible
+left/right and up/down direction of the trace.
 
 ### Hold stability
 
@@ -92,7 +96,7 @@ installation.
 
 It contains:
 
-- session metadata and program,
+- session metadata, program, and optional Meyton total,
 - statistics for each metric,
 - comparison with earlier sessions,
 - one row per shot with rank, comparison index, and raw peaks,
@@ -106,8 +110,27 @@ The A4 report contains:
 - mean and best values,
 - a colored progress chart for the three metrics,
 - comparison with earlier sessions,
-- fields for entering the Meyton result,
+- the Meyton total entered when the session was stopped,
 - a complete shot table with automatic page breaks.
+
+An LP40 series occupies exactly one A4 table page. Longer sessions continue
+on additional pages containing up to 40 shots each.
+
+## Raw JSON export
+
+The JSON export uses the `aimtracer-raw-session` format with `schemaVersion`
+1. It contains:
+
+- session data including the program and Meyton total,
+- trigger time, sample rate, and peaks for every shot,
+- every unmodified `gx/gy/gz`, `ax/ay/az`, and microphone sample,
+- a derived sample time relative to the trigger in milliseconds,
+- the fixed mounting profile
+  `xiao-sense-component-side-down-usb-toward-shooter`.
+
+Raw values remain in sensor coordinates. The metadata records the display
+mapping as `roll = gy`, `right = -gz`, and `up = gx`. Future scoring formulas
+can therefore be recalculated without changing the measured data.
 
 Files are generated locally on the phone. iOS uses the share sheet; Android
 uses the system document picker. AimTracer performs no cloud transfer.

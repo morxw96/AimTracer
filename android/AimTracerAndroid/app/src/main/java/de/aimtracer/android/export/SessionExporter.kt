@@ -6,20 +6,26 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.pdf.PdfDocument
+import de.aimtracer.android.L10n
 import de.aimtracer.android.analysis.MetricComparison
 import de.aimtracer.android.analysis.MetricStatistics
+import de.aimtracer.android.analysis.MotionAnalysis
 import de.aimtracer.android.analysis.SessionAnalysis
 import de.aimtracer.android.analysis.ShotStanding
 import de.aimtracer.android.model.TrainingSession
+import org.json.JSONArray
+import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 object SessionExporter {
-    private val locale = Locale.GERMANY
+    private val locale: Locale
+        get() = L10n.locale
     private val dateTime = SimpleDateFormat("dd.MM.yyyy HH:mm:ss", locale)
     private val time = SimpleDateFormat("HH:mm:ss", locale)
 
@@ -27,7 +33,9 @@ object SessionExporter {
         session: TrainingSession,
         previousSessions: List<TrainingSession>
     ): ByteArray {
-        require(session.shots.isNotEmpty()) { "Session enthält keine Schüsse." }
+        require(session.shots.isNotEmpty()) {
+            L10n.text("Session enthält keine Schüsse.")
+        }
         val summary = SessionAnalysis.summary(session)
         val comparison = SessionAnalysis.comparison(session, previousSessions)
         val rows = mutableListOf<List<String>>(
@@ -41,6 +49,10 @@ object SessionExporter {
             ),
             listOf("Schüsse", session.shots.size.toString()),
             listOf("Geplant", session.program.plannedShots?.toString().orEmpty()),
+            listOf(
+                "Meyton-Gesamtergebnis",
+                session.meytonScore?.let(::score).orEmpty()
+            ),
             emptyList(),
             listOf(
                 "Kennwert",
@@ -110,7 +122,7 @@ object SessionExporter {
         )
 
         val text = rows.joinToString("\r\n") { row ->
-            row.joinToString(";") { csvField(it) }
+            row.joinToString(";") { csvField(L10n.text(it)) }
         }
         return byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte()) +
             text.toByteArray(Charsets.UTF_8)
@@ -120,7 +132,9 @@ object SessionExporter {
         session: TrainingSession,
         previousSessions: List<TrainingSession>
     ): ByteArray {
-        require(session.shots.isNotEmpty()) { "Session enthält keine Schüsse." }
+        require(session.shots.isNotEmpty()) {
+            L10n.text("Session enthält keine Schüsse.")
+        }
         val document = PdfDocument()
         try {
             val report = PdfReport(document, session, previousSessions)
@@ -138,7 +152,100 @@ object SessionExporter {
         "${safeName(session.name)}-Excel.csv"
 
     fun pdfFileName(session: TrainingSession) =
-        "${safeName(session.name)}-Bericht.pdf"
+        "${safeName(session.name)}-${L10n.text("Bericht")}.pdf"
+
+    fun rawJson(session: TrainingSession): ByteArray {
+        require(session.shots.isNotEmpty()) {
+            L10n.text("Session enthält keine Schüsse.")
+        }
+        val root = JSONObject().apply {
+            put("schemaVersion", 1)
+            put("format", "aimtracer-raw-session")
+            put("exportedAt", isoDate(System.currentTimeMillis()))
+            put("mounting", JSONObject().apply {
+                put("id", MotionAnalysis.MOUNTING_PROFILE_ID)
+                put(
+                    "boardOrientation",
+                    "PCB underside up; component and IMU side down; " +
+                        "USB-C toward shooter"
+                )
+                put(
+                    "rawSampleAxes",
+                    "Unmodified LSM6DS3TR-C sensor coordinates"
+                )
+                put("analysisAxes", JSONObject().apply {
+                    put("roll", "gy")
+                    put("horizontalRight", "-gz")
+                    put("verticalUp", "gx")
+                })
+            })
+            put("session", rawSession(session))
+        }
+        return root.toString(2).toByteArray(Charsets.UTF_8)
+    }
+
+    fun jsonFileName(session: TrainingSession) =
+        "${safeName(session.name)}-${L10n.text("Rohdaten")}.json"
+
+    private fun rawSession(session: TrainingSession) = JSONObject().apply {
+        put("id", session.id)
+        put("startedAt", isoDate(session.startedAt))
+        put(
+            "endedAt",
+            session.endedAt?.let(::isoDate) ?: JSONObject.NULL
+        )
+        put("name", session.name)
+        put("program", when (session.program) {
+            de.aimtracer.android.model.TrainingProgram.LP20 -> "lp20"
+            de.aimtracer.android.model.TrainingProgram.LP40 -> "lp40"
+            de.aimtracer.android.model.TrainingProgram.LP60 -> "lp60"
+            de.aimtracer.android.model.TrainingProgram.DRY_FIRE -> "dryFire"
+            de.aimtracer.android.model.TrainingProgram.FREE_TRAINING ->
+                "freeTraining"
+        })
+        put(
+            "plannedShotCount",
+            session.program.plannedShots ?: JSONObject.NULL
+        )
+        put("meytonScore", session.meytonScore ?: JSONObject.NULL)
+        put("shots", JSONArray().apply {
+            session.shots.forEach { shot ->
+                put(JSONObject().apply {
+                    put("id", shot.id)
+                    put("deviceShotId", shot.deviceShotId)
+                    put("receivedAt", isoDate(shot.receivedAt))
+                    put("triggerUptimeMs", shot.triggerUptimeMs)
+                    put("sampleRateHz", shot.sampleRateHz)
+                    put("triggerIndex", shot.triggerIndex)
+                    put("audioPeak", shot.audioPeak)
+                    put("accelerationPeak", shot.accelerationPeak)
+                    put("gyroPeak", shot.gyroPeak)
+                    put("samples", JSONArray().apply {
+                        shot.samples.forEach { sample ->
+                            put(JSONObject().apply {
+                                put("index", sample.index)
+                                put(
+                                    "relativeTimeMs",
+                                    if (shot.sampleRateHz == 0) 0.0 else {
+                                        (sample.index - shot.triggerIndex) *
+                                            1_000.0 / shot.sampleRateHz
+                                    }
+                                )
+                                put("gx", sample.gx.toInt())
+                                put("gy", sample.gy.toInt())
+                                put("gz", sample.gz.toInt())
+                                put("ax", sample.ax.toInt())
+                                put("ay", sample.ay.toInt())
+                                put("az", sample.az.toInt())
+                                put("microphonePeak", sample.microphonePeak)
+                                put("isTrigger", sample.isTrigger)
+                            })
+                        }
+                    })
+                })
+            }
+        })
+    }
 
     private fun statisticsRow(
         title: String,
@@ -182,8 +289,20 @@ object SessionExporter {
     private fun signedPercent(value: Double): String =
         (if (value > 0) "+" else "") + number(value, 1) + " %"
 
+    private fun score(value: Double): String =
+        number(value, if (value % 1.0 == 0.0) 0 else 1)
+
+    private fun isoDate(value: Long): String = ISO_DATE.format(Date(value))
+
     private fun safeName(value: String): String =
         value.replace(Regex("[^\\p{L}\\p{N}_-]+"), "-").trim('-')
+
+    private val ISO_DATE = SimpleDateFormat(
+        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+        Locale.US
+    ).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }
 }
 
 private class PdfReport(
@@ -281,9 +400,15 @@ private class PdfReport(
             comparisonRow(canvas, "Nachhalten", comparison.followThrough, 644f)
         }
 
+        val meytonResult = session.meytonScore?.let {
+            "Meyton-Gesamtergebnis: ${SessionExporter.number(
+                it,
+                if (it % 1.0 == 0.0) 0 else 1
+            )} Ringe"
+        } ?: "Meyton-Gesamtergebnis: nicht eingetragen"
         text(
             canvas,
-            "Meyton-Ergebnis: __________ Ringe    Innenzehner: __________",
+            meytonResult,
             margin,
             714f,
             11f,
@@ -292,8 +417,8 @@ private class PdfReport(
         )
         text(
             canvas,
-            "AimTracer misst relative Winkelbewegung. Rang und Vergleichsindex " +
-                "sind keine Ringzahl und gelten nur innerhalb dieser Session.",
+            "AimTracer misst relative Winkelbewegung; RMS, Rang und " +
+                "Vergleichsindex sind keine Ringzahl.",
             margin,
             756f,
             8f,
@@ -460,6 +585,7 @@ private class PdfReport(
             "Audio" to 60f
         )
         var rowIndex = 0
+        val rowsPerPage = 40
         while (rowIndex < summary.standings.size) {
             val canvas = newPage()
             text(canvas, "Schussübersicht", margin, 55f, 18f, Color.BLACK, true)
@@ -474,7 +600,9 @@ private class PdfReport(
                 header = true
             )
             y += 21f
-            while (rowIndex < summary.standings.size && y + 17f < 796f) {
+            // 40 rows occupy y=117..797, with enough room for the footer.
+            val pageEnd = minOf(rowIndex + rowsPerPage, summary.standings.size)
+            while (rowIndex < pageEnd) {
                 val standing = summary.standings[rowIndex]
                 tableRow(
                     canvas,
@@ -580,15 +708,15 @@ private class PdfReport(
             android.graphics.Typeface.DEFAULT
         }
         paint.style = Paint.Style.FILL
-        canvas.drawText(value, x, baseline, paint)
+        canvas.drawText(L10n.text(value), x, baseline, paint)
     }
 
     companion object {
         private val DATE_FORMAT = SimpleDateFormat(
             "dd.MM.yyyy HH:mm",
-            Locale.GERMANY
+            Locale.getDefault()
         )
-        private val TIME_FORMAT = SimpleDateFormat("HH:mm:ss", Locale.GERMANY)
+        private val TIME_FORMAT = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
 
     }
 }

@@ -16,9 +16,15 @@ precision.
 4. Slowly move the pistol left/right and up/down.
 5. Verify that the trace moves in the expected direction.
 
-The MVP axis mapping is defined in `ios/AimTracer/MotionAnalysis.swift` and
-assumes a flat-mounted board with USB-C facing the rear of the pistol. For a
-different orientation, swap `gx/gy/gz` there and invert signs as required.
+AimTracer now uses one fixed mounting profile: PCB underside up, sensor and
+component side down, and USB-C facing the shooter. The chip rotation in the
+official Seeed PCB together with ST's axis diagram yields `gy` for roll,
+`-gz` for right, and `gx` for up. Stored and exported raw values are not
+modified.
+
+The three RMS metrics use the magnitude across all axes and therefore remain
+unchanged by a sign inversion. The mounting mapping still matters for trace
+direction and future direction-sensitive metrics.
 
 ## 2. Gyro zero
 

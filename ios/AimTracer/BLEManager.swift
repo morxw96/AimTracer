@@ -24,10 +24,10 @@ enum BLEConnectionState: Equatable {
     var label: String {
         switch self {
         case .unavailable(let reason): reason
-        case .idle: "Nicht verbunden"
-        case .scanning: "Suche läuft"
-        case .connecting(let name): "Verbinde mit \(name)"
-        case .discovering: "Dienste werden geladen"
+        case .idle: L10n.text("Nicht verbunden")
+        case .scanning: L10n.text("Suche läuft")
+        case .connecting(let name): L10n.format("Verbinde mit %@", name)
+        case .discovering: L10n.text("Dienste werden geladen")
         case .ready(let name): name
         }
     }
@@ -76,7 +76,7 @@ final class BLEManager: NSObject, ObservableObject {
 
     func startScanning() {
         guard centralManager.state == .poweredOn else {
-            message = "Bluetooth ist noch nicht verfügbar."
+            message = L10n.text("Bluetooth ist noch nicht verfügbar.")
             return
         }
         discoveredDevices.removeAll()
@@ -109,7 +109,7 @@ final class BLEManager: NSObject, ObservableObject {
     func send(command: AimTracerCommand) {
         guard let connectedPeripheral,
               let controlCharacteristic else {
-            message = "AimTracer ist nicht vollständig verbunden."
+            message = L10n.text("AimTracer ist nicht vollständig verbunden.")
             return
         }
         connectedPeripheral.writeValue(
@@ -122,7 +122,7 @@ final class BLEManager: NSObject, ObservableObject {
     func send(configuration: DeviceConfiguration) {
         guard let connectedPeripheral,
               let configCharacteristic else {
-            message = "AimTracer ist nicht vollständig verbunden."
+            message = L10n.text("AimTracer ist nicht vollständig verbunden.")
             return
         }
         connectedPeripheral.writeValue(
@@ -173,17 +173,17 @@ extension BLEManager: @preconcurrency CBCentralManagerDelegate {
         case .poweredOn:
             connectionState = .idle
         case .poweredOff:
-            connectionState = .unavailable("Bluetooth ist ausgeschaltet")
+            connectionState = .unavailable(L10n.text("Bluetooth ist ausgeschaltet"))
         case .unauthorized:
-            connectionState = .unavailable("Bluetooth-Zugriff fehlt")
+            connectionState = .unavailable(L10n.text("Bluetooth-Zugriff fehlt"))
         case .unsupported:
-            connectionState = .unavailable("Bluetooth LE wird nicht unterstützt")
+            connectionState = .unavailable(L10n.text("Bluetooth LE wird nicht unterstützt"))
         case .resetting:
-            connectionState = .unavailable("Bluetooth wird neu gestartet")
+            connectionState = .unavailable(L10n.text("Bluetooth wird neu gestartet"))
         case .unknown:
-            connectionState = .unavailable("Bluetooth-Status unbekannt")
+            connectionState = .unavailable(L10n.text("Bluetooth-Status unbekannt"))
         @unknown default:
-            connectionState = .unavailable("Bluetooth nicht verfügbar")
+            connectionState = .unavailable(L10n.text("Bluetooth nicht verfügbar"))
         }
     }
 
@@ -249,7 +249,7 @@ extension BLEManager: @preconcurrency CBPeripheralDelegate {
         guard peripheral.services?.contains(where: {
             $0.uuid == AimTracerBLE.service
         }) == true else {
-            message = "AimTracer-Service wurde nicht gefunden."
+            message = L10n.text("AimTracer-Service wurde nicht gefunden.")
             return
         }
         for service in peripheral.services ?? [] {

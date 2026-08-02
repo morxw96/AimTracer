@@ -6,6 +6,7 @@ struct LiveView: View {
     @EnvironmentObject private var sessions: SessionStore
     @State private var showsConnection = false
     @State private var showsSessionSetup = false
+    @State private var showsSessionFinish = false
 
     var body: some View {
         ScrollView {
@@ -19,14 +20,17 @@ struct LiveView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(
                                 status.capturing
-                                    ? "Schuss wird aufgezeichnet …"
-                                    : "Schuss wird übertragen …"
+                                    ? L10n.text("Schuss wird aufgezeichnet …")
+                                    : L10n.text("Schuss wird übertragen …")
                             )
                             .font(.headline)
                             Text(
                                 status.transmitting
-                                    ? "Paket \(status.transmittingSampleIndex)"
-                                    : "Kurzer Nachlauf von 250 ms"
+                                    ? L10n.format(
+                                        "Paket %d",
+                                        status.transmittingSampleIndex
+                                    )
+                                    : L10n.text("Kurzer Nachlauf von 250 ms")
                             )
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -84,6 +88,12 @@ struct LiveView: View {
                 showsSessionSetup = false
             }
         }
+        .sheet(isPresented: $showsSessionFinish) {
+            SessionFinishView { meytonScore in
+                model.stopSession(meytonScore: meytonScore)
+                showsSessionFinish = false
+            }
+        }
         .alert(
             "AimTracer",
             isPresented: Binding(
@@ -110,8 +120,8 @@ struct LiveView: View {
                 Text(bluetooth.connectionState.label)
                     .font(.headline)
                 Text(bluetooth.status?.calibrated == true
-                     ? "Sensor bereit"
-                     : "Gerät ruhig halten, bis die Nullung fertig ist")
+                     ? L10n.text("Sensor bereit")
+                     : L10n.text("Gerät ruhig halten, bis die Nullung fertig ist"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 if let power = bluetooth.powerStatus {
@@ -146,10 +156,13 @@ struct LiveView: View {
 
     private func powerText(for status: DevicePowerStatus) -> String {
         if status.isCharging {
-            return "\(status.levelPercent) % • lädt"
+            return L10n.format("%d %% • lädt", status.levelPercent)
         }
         if status.externalPowerPresent {
-            return "\(status.levelPercent) % • USB angeschlossen"
+            return L10n.format(
+                "%d %% • USB angeschlossen",
+                status.levelPercent
+            )
         }
         return "\(status.levelPercent) %"
     }
@@ -167,7 +180,7 @@ struct LiveView: View {
                 .disabled(!bluetooth.connectionState.isReady)
             } else {
                 Button(role: .destructive) {
-                    model.stopSession()
+                    showsSessionFinish = true
                 } label: {
                     Label("Session beenden", systemImage: "stop.circle")
                         .frame(maxWidth: .infinity)
@@ -179,6 +192,56 @@ struct LiveView: View {
                 )
             }
         }
+    }
+}
+
+private struct SessionFinishView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var meytonScoreText = ""
+    let onFinish: (Double?) -> Void
+
+    private var trimmedScore: String {
+        meytonScoreText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var parsedScore: Double? {
+        guard !trimmedScore.isEmpty else { return nil }
+        return Double(trimmedScore.replacingOccurrences(of: ",", with: "."))
+    }
+
+    private var scoreIsValid: Bool {
+        trimmedScore.isEmpty || parsedScore != nil
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Meyton-Gesamtergebnis") {
+                    TextField("z. B. 299 oder 316,5", text: $meytonScoreText)
+                        .keyboardType(.decimalPad)
+                    Text(
+                        L10n.text(
+                            "Optional. Der Wert wird mit der Session gespeichert "
+                                + "und in CSV, JSON und PDF ausgegeben."
+                        )
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle("Session beenden")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Abbrechen") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Beenden") { onFinish(parsedScore) }
+                        .disabled(!scoreIsValid)
+                }
+            }
+        }
+        .presentationDetents([.medium])
     }
 }
 
@@ -206,8 +269,10 @@ private struct SessionSetupView: View {
                 }
                 Section {
                     Text(
-                        "Für spätere Vergleiche werden nur Sessions desselben "
-                            + "Programms gegenübergestellt."
+                        L10n.text(
+                            "Für spätere Vergleiche werden nur Sessions desselben "
+                                + "Programms gegenübergestellt."
+                        )
                     )
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -246,10 +311,12 @@ private struct LiveShotStandingCard: View {
                         Text("Einordnung in dieser Session")
                             .font(.headline)
                         Text(
-                            "Vergleich mit \(session.shots.count) "
-                                + (session.shots.count == 1
-                                    ? "Schuss"
-                                    : "Schüssen")
+                            L10n.format(
+                                session.shots.count == 1
+                                    ? "Vergleich mit %d Schuss"
+                                    : "Vergleich mit %d Schüssen",
+                                session.shots.count
+                            )
                         )
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -279,8 +346,9 @@ private struct LiveShotStandingCard: View {
                 }
                 if session.shots.count < 3 {
                     Text(
-                        "Die Rangfolge wird ab drei Schüssen "
-                            + "aussagekräftiger."
+                        L10n.text(
+                            "Die Rangfolge wird ab drei Schüssen aussagekräftiger."
+                        )
                     )
                     .font(.caption2)
                     .foregroundStyle(.secondary)
@@ -293,7 +361,7 @@ private struct LiveShotStandingCard: View {
 
     private func rank(_ title: String, _ rank: Int, count: Int) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(title)
+            Text(L10n.text(title))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
             Text("\(rank)/\(count)")
@@ -324,9 +392,9 @@ private struct StatusGrid: View {
             GridRow {
                 statusItem(
                     "Übertragung",
-                    status.transmitting
-                        ? "#\(status.transmittingShotID)"
-                        : "Bereit"
+                        status.transmitting
+                            ? "#\(status.transmittingShotID)"
+                            : L10n.text("Bereit")
                 )
                 statusItem(
                     "TX-Sample",
@@ -340,9 +408,15 @@ private struct StatusGrid: View {
                     statusItem(
                         "Akku",
                         powerStatus.isCharging
-                            ? "\(powerStatus.levelPercent) % (lädt)"
+                            ? L10n.format(
+                                "%d %% (lädt)",
+                                powerStatus.levelPercent
+                            )
                             : powerStatus.externalPowerPresent
-                                ? "\(powerStatus.levelPercent) % (USB)"
+                                ? L10n.format(
+                                    "%d %% (USB)",
+                                    powerStatus.levelPercent
+                                )
                                 : "\(powerStatus.levelPercent) %"
                     )
                     statusItem(
@@ -362,7 +436,7 @@ private struct StatusGrid: View {
 
     private func statusItem(_ title: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(title)
+            Text(L10n.text(title))
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Text(value)

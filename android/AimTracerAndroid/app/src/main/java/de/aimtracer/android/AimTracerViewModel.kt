@@ -21,9 +21,9 @@ class AimTracerViewModel(application: Application) :
         ble.send(AimTracerCommand.START_SESSION)
     }
 
-    fun stopSession() {
+    fun stopSession(meytonScore: Double?) {
         ble.send(AimTracerCommand.STOP_SESSION)
-        sessions.stop()
+        sessions.stop(meytonScore)
     }
 
     fun sendConfiguration(configuration: DeviceConfiguration) {

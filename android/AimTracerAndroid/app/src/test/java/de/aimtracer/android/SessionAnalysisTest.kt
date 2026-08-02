@@ -1,6 +1,7 @@
 package de.aimtracer.android
 
 import de.aimtracer.android.analysis.SessionAnalysis
+import de.aimtracer.android.analysis.MotionAnalysis
 import de.aimtracer.android.model.MotionSample
 import de.aimtracer.android.model.ShotCapture
 import de.aimtracer.android.model.TrainingProgram
@@ -11,6 +12,33 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SessionAnalysisTest {
+    @Test
+    fun lp20AndFixedMountingProfileAreApplied() {
+        assertEquals(20, TrainingProgram.LP20.plannedShots)
+
+        val traceShot = ShotCapture(
+            deviceShotId = 1,
+            triggerUptimeMs = 1_000,
+            sampleRateHz = 100,
+            triggerIndex = 0,
+            audioPeak = 100,
+            accelerationPeak = 200,
+            gyroPeak = 300,
+            samples = listOf(
+                sample(0, gx = 0, gz = 0),
+                sample(1, gx = 100, gz = 200)
+            )
+        )
+        val trace = MotionAnalysis.trace(traceShot)
+
+        assertTrue(trace.last().x < 0)
+        assertTrue(trace.last().y > 0)
+        assertEquals(
+            "xiao-sense-component-side-down-usb-toward-shooter",
+            MotionAnalysis.MOUNTING_PROFILE_ID
+        )
+    }
+
     @Test
     fun lowerMovementRanksFirstAndComparisonImproves() {
         val current = TrainingSession(
@@ -58,4 +86,16 @@ class SessionAnalysisTest {
                 )
             }
         )
+
+    private fun sample(index: Int, gx: Int, gz: Int) = MotionSample(
+        index = index,
+        gx = gx.toShort(),
+        gy = 0,
+        gz = gz.toShort(),
+        ax = 0,
+        ay = 0,
+        az = 0,
+        microphonePeak = 0,
+        isTrigger = index == 0
+    )
 }

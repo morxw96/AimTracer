@@ -36,9 +36,11 @@ struct SettingsView: View {
                 Text("Erkennung")
             } footer: {
                 Text(
-                    "Kalibrierpunkt: Die Startwerte müssen mit montiertem "
-                    + "Gehäuse an der LP300XT anhand echter Schüsse und "
-                    + "Trockentraining überprüft werden."
+                    L10n.text(
+                        "Kalibrierpunkt: Die Startwerte müssen mit montiertem "
+                            + "Gehäuse an der LP300XT anhand echter Schüsse und "
+                            + "Trockentraining überprüft werden."
+                    )
                 )
             }
 
@@ -46,7 +48,7 @@ struct SettingsView: View {
                 numberField("Vorlauf in ms", value: $draft.preTriggerMs)
                 numberField("Nachlauf in ms", value: $draft.postTriggerMs)
                 Stepper(
-                    "Live-Rate: \(draft.liveRateHz) Hz",
+                    L10n.format("Live-Rate: %d Hz", draft.liveRateHz),
                     value: $draft.liveRateHz,
                     in: 5...50,
                     step: 5
@@ -73,10 +75,25 @@ struct SettingsView: View {
 
             Section("Montage") {
                 Text(
-                    "Die aktuelle Visualisierung nimmt an, dass das Board "
-                    + "flach montiert ist und USB-C nach hinten zeigt. Bei "
-                    + "anderer Lage die Achsenzuordnung in MotionAnalysis.swift "
-                    + "anpassen."
+                    L10n.text(
+                        "Festes AimTracer-Profil: Platinenunterseite nach oben, "
+                            + "Sensor-/Bestückungsseite nach unten und USB-C zum "
+                            + "Schützen. Die Rohdaten bleiben unverändert; die App "
+                            + "zeigt rechts als -gz und oben als gx an; gy ist die "
+                            + "Rollachse."
+                    )
+                )
+            }
+
+            Section("Über AimTracer") {
+                LabeledContent("AimTracer") {
+                    Text("by Moritz Wenzel")
+                        .foregroundStyle(.secondary)
+                }
+                LabeledContent(
+                    "App-Version",
+                    value: Bundle.main.infoDictionary?["CFBundleShortVersionString"]
+                        as? String ?? "–"
                 )
             }
         }
@@ -97,8 +114,8 @@ struct SettingsView: View {
         _ title: String,
         value: Binding<UInt16>
     ) -> some View {
-        LabeledContent(title) {
-            TextField(title, value: value, format: .number)
+        LabeledContent(L10n.text(title)) {
+            TextField(L10n.text(title), value: value, format: .number)
                 .keyboardType(.numberPad)
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: 110)
@@ -109,8 +126,8 @@ struct SettingsView: View {
         _ title: String,
         value: Binding<UInt8>
     ) -> some View {
-        LabeledContent(title) {
-            TextField(title, value: value, format: .number)
+        LabeledContent(L10n.text(title)) {
+            TextField(L10n.text(title), value: value, format: .number)
                 .keyboardType(.numberPad)
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: 110)

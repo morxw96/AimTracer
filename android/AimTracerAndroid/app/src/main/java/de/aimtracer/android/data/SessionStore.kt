@@ -48,10 +48,15 @@ class SessionStore(context: Context) {
         save()
     }
 
-    fun stop() {
+    fun stop(meytonScore: Double? = null) {
         val id = activeSessionId ?: return
         sessions = sessions.map {
-            if (it.id == id) it.copy(endedAt = System.currentTimeMillis())
+            if (it.id == id) {
+                it.copy(
+                    endedAt = System.currentTimeMillis(),
+                    meytonScore = meytonScore
+                )
+            }
             else it
         }
         activeSessionId = null
@@ -122,6 +127,7 @@ class SessionStore(context: Context) {
         put("endedAt", session.endedAt ?: JSONObject.NULL)
         put("name", session.name)
         put("program", session.program.name)
+        put("meytonScore", session.meytonScore ?: JSONObject.NULL)
         put("shots", JSONArray().apply {
             session.shots.forEach { put(shotToJson(it)) }
         })
@@ -164,6 +170,11 @@ class SessionStore(context: Context) {
             program = runCatching {
                 TrainingProgram.valueOf(json.optString("program"))
             }.getOrDefault(TrainingProgram.FREE_TRAINING),
+            meytonScore = if (json.isNull("meytonScore")) {
+                null
+            } else {
+                json.optDouble("meytonScore").takeUnless { it.isNaN() }
+            },
             shots = List(shotsJson.length()) {
                 shotFromJson(shotsJson.getJSONObject(it))
             }

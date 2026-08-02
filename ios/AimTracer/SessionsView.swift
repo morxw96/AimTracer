@@ -89,7 +89,7 @@ private struct SessionRow: View {
 
     private func compactMetric(_ title: String, _ value: Double) -> some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text(title)
+            Text(L10n.text(title))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
             Text(value.formatted(.number.precision(.fractionLength(1))))
@@ -103,11 +103,13 @@ private enum ShotSortOrder: String, CaseIterable, Identifiable {
     case ranking = "Ranking"
 
     var id: String { rawValue }
+    var title: String { L10n.text(rawValue) }
 }
 
 private struct ExportLinks {
     let csv: URL
     let pdf: URL
+    let json: URL
 }
 
 private struct SessionDetailView: View {
@@ -191,10 +193,11 @@ private struct SessionDetailView: View {
                 Section("Vergleich mit früheren Sessions") {
                     if let comparison {
                         Text(
-                            "Mittelwert der letzten "
-                                + "\(comparison.referenceSessionCount) "
-                                + "vergleichbaren "
-                                + "\(session.effectiveProgram.title)-Sessions"
+                            L10n.format(
+                                "Mittelwert der letzten %d vergleichbaren %@-Sessions",
+                                comparison.referenceSessionCount,
+                                session.effectiveProgram.title
+                            )
                         )
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -212,8 +215,10 @@ private struct SessionDetailView: View {
                         )
                     } else {
                         Text(
-                            "Sobald eine weitere Session desselben Programms "
-                                + "vorliegt, erscheint hier der Langzeitvergleich."
+                            L10n.text(
+                                "Sobald eine weitere Session desselben Programms "
+                                    + "vorliegt, erscheint hier der Langzeitvergleich."
+                            )
                         )
                         .font(.callout)
                         .foregroundStyle(.secondary)
@@ -223,7 +228,7 @@ private struct SessionDetailView: View {
                 Section {
                     Picker("Sortierung", selection: $sortOrder) {
                         ForEach(ShotSortOrder.allCases) {
-                            Text($0.rawValue).tag($0)
+                            Text($0.title).tag($0)
                         }
                     }
                     .pickerStyle(.segmented)
@@ -254,11 +259,13 @@ private struct SessionDetailView: View {
                     Text("Schussranking")
                 } footer: {
                     Text(
-                        "Der Vergleichsindex kombiniert die drei relativen "
-                            + "Platzierungen gleichgewichtet. Er ist keine "
-                            + "Ringzahl und nur innerhalb dieser Session gültig. "
-                            + "Fehlauslösungen lassen sich nach links wischen "
-                            + "und aus der Session löschen."
+                        L10n.text(
+                            "Der Vergleichsindex kombiniert die drei relativen "
+                                + "Platzierungen gleichgewichtet. Er ist keine "
+                                + "Ringzahl und nur innerhalb dieser Session gültig. "
+                                + "Fehlauslösungen lassen sich nach links wischen "
+                                + "und aus der Session löschen."
+                        )
                     )
                 }
             }
@@ -272,7 +279,7 @@ private struct SessionDetailView: View {
                 ShareLink(
                     item: exportLinks.csv,
                     preview: SharePreview(
-                        "AimTracer Excel-Tabelle",
+                        L10n.text("AimTracer Excel-Tabelle"),
                         image: Image(systemName: "tablecells")
                     )
                 ) {
@@ -281,11 +288,20 @@ private struct SessionDetailView: View {
                 ShareLink(
                     item: exportLinks.pdf,
                     preview: SharePreview(
-                        "AimTracer PDF-Bericht",
+                        L10n.text("AimTracer PDF-Bericht"),
                         image: Image(systemName: "doc.richtext")
                     )
                 ) {
                     Label("PDF-Bericht exportieren", systemImage: "doc.richtext")
+                }
+                ShareLink(
+                    item: exportLinks.json,
+                    preview: SharePreview(
+                        L10n.text("AimTracer Rohdaten"),
+                        image: Image(systemName: "curlybraces")
+                    )
+                ) {
+                    Label("Rohdaten als JSON", systemImage: "curlybraces")
                 }
             } else {
                 Label("Export wird vorbereitet", systemImage: "clock")
@@ -328,7 +344,8 @@ private struct SessionDetailView: View {
                 pdf: try SessionExporter.makePDF(
                     session: session,
                     previousSessions: previous
-                )
+                ),
+                json: try SessionExporter.makeRawJSON(session: session)
             )
         } catch {
             exportError = error.localizedDescription
@@ -360,8 +377,8 @@ private struct SessionOverview: View {
                         .font(.largeTitle.bold().monospacedDigit())
                     Text(
                         session.effectiveProgram.plannedShotCount
-                            .map { "von \($0) Schüssen" }
-                            ?? "Schüsse"
+                            .map { L10n.format("von %d Schüssen", $0) }
+                            ?? L10n.text("Schüsse")
                     )
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -374,9 +391,26 @@ private struct SessionOverview: View {
                 )
                 .tint(.mint)
             }
+            if let meytonScore = session.meytonScore {
+                LabeledContent("Meyton-Gesamtergebnis") {
+                    Text(L10n.format(
+                        "%@ Ringe",
+                        meytonScoreText(meytonScore)
+                    ))
+                        .font(.headline.monospacedDigit())
+                }
+            }
         }
         .padding(.vertical, 5)
     }
+}
+
+private func meytonScoreText(_ value: Double) -> String {
+    value.formatted(
+        .number.precision(
+            .fractionLength(value.rounded() == value ? 0 : 1)
+        )
+    )
 }
 
 private struct SessionMetricSummary: View {
@@ -398,7 +432,7 @@ private struct SessionMetricSummary: View {
         _ statistics: MetricStatistics
     ) -> some View {
         VStack(spacing: 5) {
-            Text(title)
+            Text(L10n.text(title))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
@@ -410,10 +444,12 @@ private struct SessionMetricSummary: View {
             )
             .font(.title3.bold().monospacedDigit())
             Text(
-                "Best "
-                    + statistics.best.formatted(
+                L10n.format(
+                    "Best %@",
+                    statistics.best.formatted(
                         .number.precision(.fractionLength(2))
                     )
+                )
             )
             .font(.caption2.monospacedDigit())
             .foregroundStyle(.secondary)
@@ -429,39 +465,45 @@ private struct SessionTrendChart: View {
         Chart {
             ForEach(standings) { standing in
                 LineMark(
-                    x: .value("Schuss", standing.ordinal),
+                    x: .value(L10n.text("Schuss"), standing.ordinal),
                     y: .value("°/s RMS", standing.metrics.holdRMS),
-                    series: .value("Kennwert", "Halten")
+                    series: .value(L10n.text("Kennwert"), L10n.text("Halten"))
                 )
-                .foregroundStyle(by: .value("Kennwert", "Halten"))
+                .foregroundStyle(by: .value(L10n.text("Kennwert"), L10n.text("Halten")))
 
                 LineMark(
-                    x: .value("Schuss", standing.ordinal),
+                    x: .value(L10n.text("Schuss"), standing.ordinal),
                     y: .value("°/s RMS", standing.metrics.triggerRMS),
-                    series: .value("Kennwert", "Abzug")
+                    series: .value(L10n.text("Kennwert"), L10n.text("Abzug"))
                 )
-                .foregroundStyle(by: .value("Kennwert", "Abzug"))
+                .foregroundStyle(by: .value(L10n.text("Kennwert"), L10n.text("Abzug")))
 
                 LineMark(
                     x: .value(
-                        "Schuss",
+                        L10n.text("Schuss"),
                         standing.ordinal
                     ),
                     y: .value(
                         "°/s RMS",
                         standing.metrics.followThroughRMS
                     ),
-                    series: .value("Kennwert", "Nachhalten")
+                    series: .value(
+                        L10n.text("Kennwert"),
+                        L10n.text("Nachhalten")
+                    )
                 )
-                .foregroundStyle(by: .value("Kennwert", "Nachhalten"))
+                .foregroundStyle(by: .value(
+                    L10n.text("Kennwert"),
+                    L10n.text("Nachhalten")
+                ))
             }
         }
         .chartForegroundStyleScale([
-            "Halten": Color.mint,
-            "Abzug": Color.orange,
-            "Nachhalten": Color.blue
+            L10n.text("Halten"): Color.mint,
+            L10n.text("Abzug"): Color.orange,
+            L10n.text("Nachhalten"): Color.blue
         ])
-        .chartXAxisLabel("Schuss")
+        .chartXAxisLabel(L10n.text("Schuss"))
         .chartYAxisLabel("°/s RMS")
         .chartLegend(position: .bottom, spacing: 12)
     }
@@ -473,8 +515,11 @@ private struct TrendSummary: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(
-                "Letzte \(trend.segmentSize) gegen erste "
-                    + "\(trend.segmentSize) Schüsse"
+                L10n.format(
+                    "Letzte %d gegen erste %d Schüsse",
+                    trend.segmentSize,
+                    trend.segmentSize
+                )
             )
             .font(.caption)
             .foregroundStyle(.secondary)
@@ -488,7 +533,7 @@ private struct TrendSummary: View {
 
     private func trendValue(_ title: String, _ value: Double) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(title)
+            Text(L10n.text(title))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
             Text(signedPercent(value))
@@ -506,7 +551,7 @@ private struct ComparisonRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
+                Text(L10n.text(title))
                 Text(
                     comparison.current.formatted(
                         .number.precision(.fractionLength(2))
@@ -538,7 +583,7 @@ private struct ShotStandingRow: View {
         HStack(spacing: 12) {
             rankBadge
             VStack(alignment: .leading, spacing: 4) {
-                Text("Schuss \(standing.ordinal)")
+                Text(L10n.format("Schuss %d", standing.ordinal))
                     .font(.headline)
                 HStack(spacing: 10) {
                     value("H", standing.metrics.holdRMS)
@@ -572,7 +617,11 @@ private struct ShotStandingRow: View {
                 .foregroundStyle(rankColor)
         }
         .accessibilityLabel(
-            "Rang \(standing.overallRank) von \(shotCount)"
+            L10n.format(
+                "Rang %d von %d",
+                standing.overallRank,
+                shotCount
+            )
         )
     }
 
@@ -636,15 +685,15 @@ private struct ShotDetailView: View {
             .padding()
         }
         .navigationTitle(
-            standing.map { "Schuss \($0.ordinal)" }
-                ?? "Schuss #\(shot.deviceShotID)"
+            standing.map { L10n.format("Schuss %d", $0.ordinal) }
+                ?? L10n.format("Schuss #%d", shot.deviceShotID)
         )
         .navigationBarTitleDisplayMode(.inline)
     }
 
     private func detail(_ title: String, _ value: String) -> some View {
         VStack(alignment: .leading) {
-            Text(title)
+            Text(L10n.text(title))
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Text(value)
@@ -664,7 +713,11 @@ private struct ShotRankingDetail: View {
                 Text("Session-Ranking")
                     .font(.headline)
                 Spacer()
-                Text("#\(standing.overallRank) von \(shotCount)")
+                Text(L10n.format(
+                    "#%d von %d",
+                    standing.overallRank,
+                    shotCount
+                ))
                     .font(.title3.bold().monospacedDigit())
                     .foregroundStyle(.mint)
             }
@@ -680,7 +733,7 @@ private struct ShotRankingDetail: View {
 
     private func rank(_ title: String, _ value: Int) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(title)
+            Text(L10n.text(title))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
             Text("\(value)/\(shotCount)")

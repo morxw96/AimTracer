@@ -7,7 +7,7 @@ enum SessionExportError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .noShots:
-            "Die Session enthält noch keine Schüsse."
+            L10n.text("Die Session enthält noch keine Schüsse.")
         }
     }
 }
@@ -33,6 +33,10 @@ enum SessionExporter {
             [
                 "Geplant",
                 session.effectiveProgram.plannedShotCount.map(String.init) ?? ""
+            ],
+            [
+                "Meyton-Gesamtergebnis",
+                session.meytonScore.map(score) ?? ""
             ],
             [],
             [
@@ -113,7 +117,7 @@ enum SessionExporter {
         ]
 
         let contents = rows.map {
-            $0.map(csvField).joined(separator: ";")
+            $0.map { csvField(L10n.text($0)) }.joined(separator: ";")
         }.joined(separator: "\r\n")
         let data = Data(("\u{FEFF}" + contents).utf8)
         let url = try exportURL(
@@ -132,7 +136,7 @@ enum SessionExporter {
         guard !session.shots.isEmpty else { throw SessionExportError.noShots }
         let url = try exportURL(
             session: session,
-            suffix: "Bericht",
+            suffix: L10n.text("Bericht"),
             extension: "pdf"
         )
         let report = PDFSessionReport(
@@ -140,6 +144,25 @@ enum SessionExporter {
             previousSessions: previousSessions
         )
         try report.write(to: url)
+        return url
+    }
+
+    static func makeRawJSON(session: TrainingSession) throws -> URL {
+        guard !session.shots.isEmpty else { throw SessionExportError.noShots }
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [
+            .prettyPrinted,
+            .sortedKeys,
+            .withoutEscapingSlashes
+        ]
+        let data = try encoder.encode(RawSessionExport(session: session))
+        let url = try exportURL(
+            session: session,
+            suffix: L10n.text("Rohdaten"),
+            extension: "json"
+        )
+        try data.write(to: url, options: .atomic)
         return url
     }
 
@@ -181,7 +204,7 @@ enum SessionExporter {
     private static func number(_ value: Double, digits: Int = 3) -> String {
         String(
             format: "%.\(digits)f",
-            locale: Locale(identifier: "de_DE"),
+            locale: Locale.current,
             value
         )
     }
@@ -189,6 +212,10 @@ enum SessionExporter {
     private static func percent(_ value: Double) -> String {
         let prefix = value > 0 ? "+" : ""
         return prefix + number(value, digits: 1) + " %"
+    }
+
+    private static func score(_ value: Double) -> String {
+        number(value, digits: value.rounded() == value ? 0 : 1)
     }
 
     private static func exportURL(
@@ -213,17 +240,128 @@ enum SessionExporter {
 
     private static let exportDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "de_DE")
-        formatter.dateFormat = "dd.MM.yyyy HH:mm:ss"
+        formatter.locale = Locale.current
+        formatter.dateStyle = .short
+        formatter.timeStyle = .medium
         return formatter
     }()
 
     private static let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "de_DE")
+        formatter.locale = Locale.current
         formatter.dateFormat = "HH:mm:ss"
         return formatter
     }()
+}
+
+private struct RawSessionExport: Encodable {
+    let schemaVersion = 1
+    let format = "aimtracer-raw-session"
+    let exportedAt = Date()
+    let mounting = RawMountingMetadata()
+    let session: RawTrainingSession
+
+    init(session: TrainingSession) {
+        self.session = RawTrainingSession(session: session)
+    }
+}
+
+private struct RawMountingMetadata: Encodable {
+    let id = MotionAnalysis.mountingProfileID
+    let boardOrientation =
+        "PCB underside up; component and IMU side down; USB-C toward shooter"
+    let rawSampleAxes = "Unmodified LSM6DS3TR-C sensor coordinates"
+    let analysisAxes = [
+        "roll": "gy",
+        "horizontalRight": "-gz",
+        "verticalUp": "gx"
+    ]
+}
+
+private struct RawTrainingSession: Encodable {
+    let id: UUID
+    let startedAt: Date
+    let endedAt: Date?
+    let name: String
+    let program: String
+    let plannedShotCount: Int?
+    let meytonScore: Double?
+    let shots: [RawShotCapture]
+
+    init(session: TrainingSession) {
+        id = session.id
+        startedAt = session.startedAt
+        endedAt = session.endedAt
+        name = session.name
+        program = session.effectiveProgram.rawValue
+        plannedShotCount = session.effectiveProgram.plannedShotCount
+        meytonScore = session.meytonScore
+        shots = session.shots.map(RawShotCapture.init)
+    }
+}
+
+private struct RawShotCapture: Encodable {
+    let id: UUID
+    let deviceShotId: UInt16
+    let receivedAt: Date
+    let triggerUptimeMs: UInt32
+    let sampleRateHz: UInt16
+    let triggerIndex: UInt16
+    let audioPeak: UInt16
+    let accelerationPeak: UInt16
+    let gyroPeak: UInt16
+    let samples: [RawMotionSample]
+
+    init(shot: ShotCapture) {
+        id = shot.id
+        deviceShotId = shot.deviceShotID
+        receivedAt = shot.receivedAt
+        triggerUptimeMs = shot.triggerUptimeMs
+        sampleRateHz = shot.sampleRateHz
+        triggerIndex = shot.triggerIndex
+        audioPeak = shot.audioPeak
+        accelerationPeak = shot.accelerationPeak
+        gyroPeak = shot.gyroPeak
+        samples = shot.samples.map {
+            RawMotionSample(
+                sample: $0,
+                triggerIndex: shot.triggerIndex,
+                sampleRateHz: shot.sampleRateHz
+            )
+        }
+    }
+}
+
+private struct RawMotionSample: Encodable {
+    let index: UInt16
+    let relativeTimeMs: Double
+    let gx: Int16
+    let gy: Int16
+    let gz: Int16
+    let ax: Int16
+    let ay: Int16
+    let az: Int16
+    let microphonePeak: UInt16
+    let isTrigger: Bool
+
+    init(
+        sample: MotionSample,
+        triggerIndex: UInt16,
+        sampleRateHz: UInt16
+    ) {
+        index = sample.index
+        relativeTimeMs = sampleRateHz == 0 ? 0 :
+            (Double(sample.index) - Double(triggerIndex))
+                * 1_000.0 / Double(sampleRateHz)
+        gx = sample.gx
+        gy = sample.gy
+        gz = sample.gz
+        ax = sample.ax
+        ay = sample.ay
+        az = sample.az
+        microphonePeak = sample.microphonePeak
+        isTrigger = sample.isTrigger
+    }
 }
 
 private struct PDFSessionReport {
@@ -293,9 +431,13 @@ private struct PDFSessionReport {
         let planned = session.effectiveProgram.plannedShotCount
             .map { " / \($0)" } ?? ""
         drawText(
-            "\(session.effectiveProgram.title)  •  "
-                + "\(session.shots.count)\(planned) Schüsse  •  "
-                + Self.dateFormatter.string(from: session.startedAt),
+            L10n.format(
+                "%@  •  %d%@ Schüsse  •  %@",
+                session.effectiveProgram.title,
+                session.shots.count,
+                planned,
+                Self.dateFormatter.string(from: session.startedAt)
+            ),
             in: CGRect(
                 x: margin,
                 y: 128,
@@ -357,9 +499,11 @@ private struct PDFSessionReport {
 
         if let comparison {
             drawText(
-                "Gegen den Mittelwert der letzten "
-                    + "\(comparison.referenceSessionCount) "
-                    + "vergleichbaren \(session.effectiveProgram.title)-Sessions",
+                L10n.format(
+                    "Gegen den Mittelwert der letzten %d vergleichbaren %@-Sessions",
+                    comparison.referenceSessionCount,
+                    session.effectiveProgram.title
+                ),
                 in: CGRect(
                     x: margin,
                     y: comparisonY,
@@ -399,8 +543,14 @@ private struct PDFSessionReport {
             )
         }
 
+        let meytonResult = session.meytonScore.map {
+            L10n.format(
+                "Meyton-Gesamtergebnis: %@ Ringe",
+                Self.score($0)
+            )
+        } ?? L10n.text("Meyton-Gesamtergebnis: nicht eingetragen")
         drawText(
-            "Meyton-Ergebnis: __________ Ringe    Innenzehner: __________",
+            meytonResult,
             in: CGRect(
                 x: margin,
                 y: 690,
@@ -411,9 +561,10 @@ private struct PDFSessionReport {
             color: .label
         )
         drawText(
-            "AimTracer misst relative Winkelbewegung. Niedrigere RMS-Werte "
-                + "bedeuten weniger Bewegung; Rang und Vergleichsindex sind "
-                + "keine Ringzahl und gelten nur innerhalb dieser Session.",
+            L10n.text(
+                "AimTracer misst relative Winkelbewegung; RMS, Rang und "
+                    + "Vergleichsindex sind keine Ringzahl."
+            ),
             in: CGRect(
                 x: margin,
                 y: 738,
@@ -450,7 +601,10 @@ private struct PDFSessionReport {
             color: .label
         )
         drawText(
-            "°/s RMS  •  Best \(Self.number(statistics.best, digits: 2))",
+            L10n.format(
+                "°/s RMS  •  Best %@",
+                Self.number(statistics.best, digits: 2)
+            ),
             in: CGRect(x: x + 10, y: y + 59, width: width - 20, height: 13),
             font: .systemFont(ofSize: 7.5),
             color: muted
@@ -621,6 +775,7 @@ private struct PDFSessionReport {
             ("Audio", 60)
         ]
         let rowHeight: CGFloat = 17
+        let rowsPerPage = 40
         var rowIndex = 0
         var pageNumber = 2
 
@@ -658,7 +813,10 @@ private struct PDFSessionReport {
             )
             y += 21
 
-            while rowIndex < standings.count && y + rowHeight < 796 {
+            // Exactly 40 rows occupy y=117...797, leaving 16 pt before
+            // the footer. This keeps a complete LP40 table on one A4 page.
+            let pageEnd = min(rowIndex + rowsPerPage, standings.count)
+            while rowIndex < pageEnd {
                 let standing = standings[rowIndex]
                 drawTableRow(
                     [
@@ -741,7 +899,7 @@ private struct PDFSessionReport {
             color: muted
         )
         drawText(
-            "Seite \(pageNumber)",
+            L10n.format("Seite %d", pageNumber),
             in: CGRect(
                 x: page.width - margin - 80,
                 y: page.height - 29,
@@ -764,7 +922,7 @@ private struct PDFSessionReport {
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = alignment
         paragraph.lineBreakMode = .byTruncatingTail
-        (text as NSString).draw(
+        (L10n.text(text) as NSString).draw(
             in: rect,
             withAttributes: [
                 .font: font,
@@ -777,21 +935,26 @@ private struct PDFSessionReport {
     private static func number(_ value: Double, digits: Int) -> String {
         String(
             format: "%.\(digits)f",
-            locale: Locale(identifier: "de_DE"),
+            locale: Locale.current,
             value
         )
     }
 
+    private static func score(_ value: Double) -> String {
+        number(value, digits: value.rounded() == value ? 0 : 1)
+    }
+
     private static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "de_DE")
-        formatter.dateFormat = "dd.MM.yyyy HH:mm"
+        formatter.locale = Locale.current
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
         return formatter
     }()
 
     private static let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "de_DE")
+        formatter.locale = Locale.current
         formatter.dateFormat = "HH:mm:ss"
         return formatter
     }()

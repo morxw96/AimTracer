@@ -1,5 +1,7 @@
 # Feldkalibrierung
 
+[English](CALIBRATION.en.md)
+
 Die Startwerte sind absichtlich konservative Platzhalter. Mikrofonpegel und
 Körperschall hängen stark von Gehäuse, Klemmkraft, Einbaulage und Waffe ab.
 Ohne Messreihe an der montierten LP300XT wäre eine „fertige“ Schwelle
@@ -13,9 +15,15 @@ Scheingenauigkeit.
 4. Die Pistole langsam nach links/rechts und oben/unten bewegen.
 5. Prüfen, ob die Spur erwartungsgemäß läuft.
 
-Die MVP-Achsenzuordnung steht in `ios/AimTracer/MotionAnalysis.swift` und nimmt
-ein flach montiertes Board mit USB-C zur Rückseite der Pistole an. Bei anderer
-Montage dort `gx/gy/gz` tauschen und gegebenenfalls das Vorzeichen invertieren.
+AimTracer verwendet jetzt ein festes Montageprofil: Platinenunterseite nach
+oben, Sensor-/Bestückungsseite nach unten und USB-C zum Schützen. Aus der
+Chiprotation im offiziellen Seeed-PCB und dem ST-Achsdiagramm folgt:
+`gy` ist Rollen, `-gz` ist rechts und `gx` ist oben. Die
+gespeicherten und exportierten Rohwerte werden dabei nicht verändert.
+
+Die drei RMS-Kennwerte verwenden den Betrag aller Achsen und bleiben deshalb
+bei einer reinen Vorzeichenänderung gleich. Die Montagezuordnung ist dennoch
+für die Richtung der Spur und künftige richtungsabhängige Bewertungen wichtig.
 
 ## 2. Gyro-Nullpunkt
 

@@ -16,11 +16,13 @@ struct TraceCard: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(shot == nil ? "Live-Bewegung" : "Letzter Schuss")
+                    Text(L10n.text(shot == nil ? "Live-Bewegung" : "Letzter Schuss"))
                         .font(.headline)
-                    Text(shot == nil
-                         ? "Relative Winkelspur"
-                         : "Blau vor, orange nach der Auslösung")
+                    Text(L10n.text(
+                        shot == nil
+                            ? "Relative Winkelspur"
+                            : "Blau vor, orange nach der Auslösung"
+                    ))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -153,7 +155,7 @@ struct ShotMetricsView: View {
 
     private func metric(_ title: String, _ value: Double) -> some View {
         VStack(spacing: 5) {
-            Text(title)
+            Text(L10n.text(title))
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Text(value.formatted(.number.precision(.fractionLength(1))))

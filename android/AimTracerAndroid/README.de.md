@@ -13,12 +13,13 @@ zuverlässige Schussübertragung wird Firmware 0.2 oder neuer empfohlen.
 - bestätigte BLE-Indications sowie Rekonstruktion kompletter
   20-Byte-Schusstransfers mit Anzahl- und CRC-32-Prüfung,
 - Live-Winkelspur sowie Vor-/Nachlaufspur je Schuss,
-- LP40-, LP60-, Trocken- und freie Sessions,
+- LP20-, LP40-, LP60-, Trocken- und freie Sessions,
 - Kennwerte für Ruhig halten, Abzugsverhalten und Nachhalten,
 - Rang je Kennwert und Gesamtrang innerhalb einer Session,
 - Verlauf, Anfang-/Ende-Trend und Vergleich mit bis zu fünf früheren Sessions,
 - atomare lokale JSON-Speicherung,
-- Excel-kompatibler CSV- und A4-PDF-Export über den Android-Dokumentdialog,
+- automatische deutsche/englische Lokalisierung anhand der Handysprache,
+- Excel-kompatibler CSV-, Rohdaten-JSON- und A4-PDF-Export,
 - Anzeige und Änderung der Firmware-Triggerparameter,
 - Anzeige von Akkustand, Akkuspannung und Ladevorgang,
 - sichtbarer Aufnahme- und Übertragungsstatus nach einer Auslösung,
@@ -71,15 +72,17 @@ Debug-Paket ist nur zum Testen auf eigenen Geräten gedacht.
 
 1. XIAO einschalten und ruhig liegen lassen.
 2. Im Tab `Live` auf `Verbinden` tippen und `AimTracer` wählen.
-3. Eine LP40-, LP60-, Trocken- oder freie Session starten.
+3. Eine LP20-, LP40-, LP60-, Trocken- oder freie Session starten.
 4. Nach jeder erkannten Auslösung erscheinen Spur, drei Kennwerte und der
    momentane Rang innerhalb der Session.
-5. Die Session beenden und im Tab `Sessions` öffnen.
+5. Die Session beenden, optional das Meyton-Gesamtergebnis eintragen und im
+   Tab `Sessions` öffnen.
 6. Dort Verlauf, Rangliste und Vergleich zu früheren Sessions ansehen.
-7. Mit `CSV für Excel` oder `PDF-Bericht` einen Zielort im Android-
+7. Mit `CSV für Excel`, `PDF-Bericht` oder `Rohdaten als JSON` einen Zielort im Android-
    Dokumentdialog auswählen.
 
-Das PDF besitzt Leerfelder für Meyton-Ringzahl und Innenzehner. Die
+Das gespeicherte Meyton-Gesamtergebnis erscheint in allen Exporten. Eine
+LP40-Tabelle passt vollständig auf eine A4-Seite. Die
 AimTracer-Werte sind relative Bewegungskennwerte, keine Treffer- oder
 Ringprognose.
 
@@ -90,7 +93,7 @@ app/src/main/java/de/aimtracer/android/
 ├── analysis/   Winkelspur, Kennwerte, Ranking und Sessionsvergleich
 ├── ble/        BLE-Scan, GATT-Verbindung und Datenempfang
 ├── data/       atomare Sessionpersistenz
-├── export/     CSV- und PDF-Erzeugung
+├── export/     CSV-, JSON- und PDF-Erzeugung
 ├── model/      Datenmodelle
 ├── protocol/   Binärprotokoll, CRC und Schussassembler
 └── ui/         Jetpack-Compose-Oberfläche
@@ -107,7 +110,8 @@ beschrieben.
 Alle bewusst noch praktisch zu bestimmenden Werte sind im Code mit
 `CALIBRATION:` markiert. Besonders wichtig sind:
 
-- Achsenzuordnung in `analysis/MotionAnalysis.kt`,
+- festes Montageprofil: Platinenunterseite oben, Sensorseite unten und USB-C
+  zum Schützen,
 - Audio-, Accel- und Gyro-Schwellen in der Firmware beziehungsweise im
   Kalibrierungs-Tab,
 - gleichgewichtete Zusammenführung der drei Kennwerte zum Vergleichsindex.
@@ -118,7 +122,7 @@ Die Schritte am montierten Gerät stehen in
 ## Datenschutz
 
 Sessions werden in `filesDir/sessions.json` im privaten App-Speicher gesichert.
-CSV und PDF entstehen erst beim Export und werden nur an den im
+CSV, JSON und PDF entstehen erst beim Export und werden nur an den im
 Android-Dokumentdialog gewählten Ort geschrieben. AimTracer besitzt keine
 Cloud- oder sonstige Netzwerkfunktion.
 
@@ -127,6 +131,6 @@ Cloud- oder sonstige Netzwerkfunktion.
 - Gradle 8.12,
 - Android Gradle Plugin 8.5.1,
 - Kotlin 2.0.21,
-- App 0.4.1,
+- App 0.6.0,
 - compileSdk/targetSdk 35, minSdk 26,
 - sauberer `testDebugUnitTest`, `assembleDebug` und `lintDebug`-Lauf.

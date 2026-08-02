@@ -20,8 +20,8 @@ final class AppModel: ObservableObject {
         bluetooth.send(command: .startSession)
     }
 
-    func stopSession() {
+    func stopSession(meytonScore: Double?) {
         bluetooth.send(command: .stopSession)
-        sessions.stopSession()
+        sessions.stopSession(meytonScore: meytonScore)
     }
 }

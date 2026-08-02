@@ -47,11 +47,12 @@ final class SessionStore: ObservableObject {
         save()
     }
 
-    func stopSession() {
+    func stopSession(meytonScore: Double? = nil) {
         guard let activeSessionID,
               let index = sessions.firstIndex(where: { $0.id == activeSessionID })
         else { return }
         sessions[index].endedAt = Date()
+        sessions[index].meytonScore = meytonScore
         self.activeSessionID = nil
         save()
     }

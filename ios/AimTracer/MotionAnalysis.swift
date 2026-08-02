@@ -17,6 +17,12 @@ enum MotionAnalysis {
     // LSM6DS3TR-C sensitivity at ±500 dps.
     static let gyroDegreesPerSecondPerLSB = 0.0175
 
+    /// Fixed AimTracer enclosure profile:
+    /// XIAO component side down, PCB underside up, USB-C toward the shooter.
+    /// Raw samples stay untouched; only display/analysis axes are transformed.
+    static let mountingProfileID =
+        "xiao-sense-component-side-down-usb-toward-shooter"
+
     static func trace(for shot: ShotCapture) -> [TracePoint] {
         guard !shot.samples.isEmpty, shot.sampleRateHz > 0 else { return [] }
         let dt = 1.0 / Double(shot.sampleRateHz)
@@ -26,10 +32,10 @@ enum MotionAnalysis {
         points.reserveCapacity(shot.samples.count)
 
         for sample in shot.samples {
-            // CALIBRATION: Axis mapping depends on the enclosure orientation.
-            // This assumes the board is flat, USB-C to the rear of the pistol.
-            x += Double(sample.gz) * gyroDegreesPerSecondPerLSB * dt
-            y += Double(sample.gy) * gyroDegreesPerSecondPerLSB * dt
+            // Seeed PCB rotation + ST package axes for the fixed enclosure:
+            // yaw right = -gz, pitch up = +gx, longitudinal roll = gy.
+            x += -Double(sample.gz) * gyroDegreesPerSecondPerLSB * dt
+            y += Double(sample.gx) * gyroDegreesPerSecondPerLSB * dt
             let relative = (
                 Double(sample.index) - Double(shot.triggerIndex)
             ) * dt
@@ -61,8 +67,8 @@ enum MotionAnalysis {
             let deltaMs = current.uptimeMs &- previous.uptimeMs
             guard deltaMs < 250 else { continue }
             let dt = Double(deltaMs) / 1_000.0
-            x += Double(current.gz) * gyroDegreesPerSecondPerLSB * dt
-            y += Double(current.gy) * gyroDegreesPerSecondPerLSB * dt
+            x += -Double(current.gz) * gyroDegreesPerSecondPerLSB * dt
+            y += Double(current.gx) * gyroDegreesPerSecondPerLSB * dt
             points.append(
                 TracePoint(
                     x: x,

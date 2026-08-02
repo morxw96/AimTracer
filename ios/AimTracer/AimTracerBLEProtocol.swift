@@ -31,23 +31,26 @@ enum AimTracerProtocolError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidLength:
-            return "BLE-Paket hat eine unerwartete Länge."
+            return L10n.text("BLE-Paket hat eine unerwartete Länge.")
         case .invalidVersion:
-            return "Firmware und App verwenden verschiedene Protokollversionen."
+            return L10n.text("Firmware und App verwenden verschiedene Protokollversionen.")
         case .invalidPacket:
-            return "BLE-Paket ist ungültig."
+            return L10n.text("BLE-Paket ist ungültig.")
         case .incompleteShot(
             let expected,
             let received,
             let firstMissingIndex
         ):
             let missing = firstMissingIndex.map {
-                " Erstes fehlendes Paket: \($0)."
+                L10n.format(" Erstes fehlendes Paket: %d.", $0)
             } ?? ""
-            return "Schussübertragung war unvollständig " +
-                "(\(received) von \(expected) Samples)." + missing
+            return L10n.format(
+                "Schussübertragung war unvollständig (%d von %d Samples).",
+                received,
+                expected
+            ) + missing
         case .checksumMismatch:
-            return "Prüfsumme der Schussdaten stimmt nicht."
+            return L10n.text("Prüfsumme der Schussdaten stimmt nicht.")
         }
     }
 }

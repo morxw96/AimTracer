@@ -1,13 +1,16 @@
 # Sessionauswertung und Export
 
+[English](ANALYSIS_AND_EXPORT.en.md)
+
 AimTracer 0.2 wertet die gespeicherten Schussfenster einer Session aus. Die
 Kennwerte sind für den Vergleich des eigenen Bewegungsablaufs gedacht. Sie
 berechnen weder den Zielpunkt noch eine Ringzahl.
 
 ## Programme
 
-Beim Start einer Session stehen vier Programme zur Auswahl:
+Beim Start einer Session stehen fünf Programme zur Auswahl:
 
+- `LP20` mit 20 geplanten Schüssen,
 - `LP40` mit 40 geplanten Schüssen,
 - `LP60` mit 60 geplanten Schüssen,
 - Trockentraining ohne feste Schusszahl,
@@ -27,6 +30,9 @@ RMS = sqrt(mean(gx² + gy² + gz²))
 ```
 
 Niedrigere Werte bedeuten weniger Winkelbewegung im betrachteten Zeitfenster.
+Da der Betrag aller drei Achsen verwendet wird, beeinflusst die feste
+Montage-Achsentransformation diese drei RMS-Werte nicht. Sie bestimmt aber die
+sichtbare Links-/Rechts- und Oben-/Unten-Richtung der Spur.
 
 ### Ruhig halten
 
@@ -91,7 +97,7 @@ deutschen Excel-Installation direkt öffnen.
 
 Enthalten sind:
 
-- Sessionmetadaten und Programm,
+- Sessionmetadaten, Programm und optionales Meyton-Gesamtergebnis,
 - Statistik je Kennwert,
 - Vergleich mit früheren Sessions,
 - eine Zeile je Schuss mit Rang, Vergleichsindex und Roh-Peaks,
@@ -105,8 +111,28 @@ Der A4-Bericht enthält:
 - Mittel- und Bestwerte,
 - einen farbigen Verlauf der drei Kennwerte,
 - Vergleich mit früheren Sessions,
-- Felder zum Eintragen des Meyton-Ergebnisses,
+- das beim Sessionende eingegebene Meyton-Gesamtergebnis,
 - vollständige Schusstabelle mit automatischem Seitenumbruch.
+
+Eine LP40-Serie belegt genau eine A4-Tabellenseite; bei längeren Sessions
+folgen weitere Seiten mit jeweils bis zu 40 Schüssen.
+
+## Rohdaten-JSON
+
+Der JSON-Export verwendet das Format `aimtracer-raw-session` mit
+`schemaVersion` 1. Er enthält:
+
+- Sessiondaten einschließlich Programm und Meyton-Gesamtergebnis,
+- Triggerzeitpunkt, Abtastrate und Peaks jedes Schusses,
+- jedes unveränderte `gx/gy/gz`-, `ax/ay/az`- und Mikrofonsample,
+- eine daraus berechnete relative Samplezeit in Millisekunden,
+- das feste Montageprofil
+  `xiao-sense-component-side-down-usb-toward-shooter`.
+
+Die Rohwerte bleiben in den Sensorachsen. Als Metadaten ist die
+Anzeigezuordnung `roll = gy`, `rechts = -gz`, `oben = gx` enthalten. Dadurch
+können spätere Bewertungsformeln neu berechnet werden, ohne die Messdaten zu
+verändern.
 
 Die Dateien werden lokal auf dem Telefon erzeugt. iOS verwendet das Teilen-
 Menü, Android den systemweiten Dokumentdialog. Es findet keine

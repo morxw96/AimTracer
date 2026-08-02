@@ -36,7 +36,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -51,6 +50,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import de.aimtracer.android.AimTracerViewModel
+import de.aimtracer.android.BuildConfig
+import de.aimtracer.android.L10n
 import de.aimtracer.android.analysis.MetricComparison
 import de.aimtracer.android.analysis.MotionAnalysis
 import de.aimtracer.android.analysis.SessionAnalysis
@@ -78,6 +79,7 @@ fun LiveScreen(
     val sessions = viewModel.sessions
     var showDevices by remember { mutableStateOf(false) }
     var showProgram by remember { mutableStateOf(false) }
+    var showSessionFinish by remember { mutableStateOf(false) }
     val active = sessions.activeSession
     val lastShot = ble.lastShot
 
@@ -126,7 +128,7 @@ fun LiveScreen(
             }
         } else {
             Button(
-                onClick = viewModel::stopSession,
+                onClick = { showSessionFinish = true },
                 enabled = ble.status?.capturing != true &&
                     ble.status?.transmitting != true,
                 modifier = Modifier.fillMaxWidth()
@@ -245,6 +247,16 @@ fun LiveScreen(
             }
         )
     }
+
+    if (showSessionFinish) {
+        SessionFinishDialog(
+            onDismiss = { showSessionFinish = false },
+            onFinish = { meytonScore ->
+                viewModel.stopSession(meytonScore)
+                showSessionFinish = false
+            }
+        )
+    }
 }
 
 @Composable
@@ -333,6 +345,54 @@ private fun ProgramDialog(
         },
         confirmButton = {
             TextButton(onClick = { onStart(selected) }) { Text("Starten") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Abbrechen") }
+        }
+    )
+}
+
+@Composable
+private fun SessionFinishDialog(
+    onDismiss: () -> Unit,
+    onFinish: (Double?) -> Unit
+) {
+    var scoreText by remember { mutableStateOf("") }
+    val trimmed = scoreText.trim()
+    val parsed = trimmed
+        .replace(',', '.')
+        .takeIf { it.isNotEmpty() }
+        ?.toDoubleOrNull()
+    val valid = trimmed.isEmpty() || parsed != null
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Session beenden") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = scoreText,
+                    onValueChange = { scoreText = it },
+                    label = { Text("Meyton-Gesamtergebnis") },
+                    placeholder = { Text("z. B. 299 oder 316,5") },
+                    singleLine = true,
+                    isError = !valid,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Decimal
+                    )
+                )
+                Text(
+                    "Optional. Der Wert erscheint in CSV, JSON und PDF.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onFinish(parsed) },
+                enabled = valid
+            ) { Text("Beenden") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Abbrechen") }
@@ -548,6 +608,7 @@ private fun SessionDetail(
     var sort by remember { mutableStateOf(RankingSort.CHRONOLOGICAL) }
     var pendingCsv by remember { mutableStateOf<ByteArray?>(null) }
     var pendingPdf by remember { mutableStateOf<ByteArray?>(null) }
+    var pendingJson by remember { mutableStateOf<ByteArray?>(null) }
     val csvLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("text/csv")
     ) { uri ->
@@ -559,6 +620,12 @@ private fun SessionDetail(
     ) { uri ->
         pendingPdf?.let { writeDocument(context, uri, it) }
         pendingPdf = null
+    }
+    val jsonLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        pendingJson?.let { writeDocument(context, uri, it) }
+        pendingJson = null
     }
 
     LazyColumn(
@@ -602,6 +669,19 @@ private fun SessionDetail(
                             trackColor = MaterialTheme.colorScheme.surfaceVariant
                         )
                     }
+                    session.meytonScore?.let { score ->
+                        Spacer(Modifier.height(10.dp))
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Meyton-Gesamtergebnis")
+                            Text(
+                                "${scoreText(score)} Ringe",
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -643,6 +723,26 @@ private fun SessionDetail(
                             TrendSummaryRow(it)
                         }
                     }
+                }
+                OutlinedButton(
+                    onClick = {
+                        runCatching {
+                            SessionExporter.rawJson(session)
+                        }.onSuccess {
+                            pendingJson = it
+                            jsonLauncher.launch(
+                                SessionExporter.jsonFileName(session)
+                            )
+                        }.onFailure {
+                            toast(
+                                context,
+                                it.message ?: "JSON-Export fehlgeschlagen."
+                            )
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                ) {
+                    Text("Rohdaten als JSON")
                 }
             }
             item {
@@ -979,6 +1079,42 @@ fun SettingsScreen(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        Text(
+            "Festes Montageprofil: Platinenunterseite oben, Sensorseite " +
+                "unten, USB-C zum Schützen. Rohdaten werden unverändert " +
+                "exportiert; die Anzeige nutzt rechts = -gz, oben = gx und " +
+                "Rollen = gy.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        SectionTitle("Über AimTracer")
+        Card(Modifier.fillMaxWidth()) {
+            Column(
+                Modifier.fillMaxWidth().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("AimTracer", fontWeight = FontWeight.Bold)
+                    Text(
+                        "by Moritz Wenzel",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("App-Version")
+                    Text(
+                        BuildConfig.VERSION_NAME,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -1013,10 +1149,13 @@ private fun writeDocument(context: Context, uri: Uri?, bytes: ByteArray) {
 }
 
 private fun toast(context: Context, message: String) {
-    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+    Toast.makeText(context, L10n.text(message), Toast.LENGTH_LONG).show()
 }
 
 private val DATE_TIME: DateFormat = DateFormat.getDateTimeInstance(
     DateFormat.SHORT,
     DateFormat.SHORT
 )
+
+private fun scoreText(value: Double): String =
+    decimal(value, if (value % 1.0 == 0.0) 0 else 1)

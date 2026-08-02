@@ -1,6 +1,8 @@
 # AimTracer MVP
 
-Current release: app **0.4.1**, firmware **0.5**.
+[Deutsch](README.de.md)
+
+Current release: app **0.6.0**, firmware **0.5**.
 
 AimTracer is an open-source trigger and hold-error monitor for the **Seeed
 Studio XIAO nRF52840 Sense**. The board measures pistol movement with its
@@ -21,12 +23,15 @@ The MVP includes:
 - native SwiftUI and Kotlin/Jetpack Compose interfaces,
 - full shot traces and hold, trigger, and follow-through metrics,
 - a local session history written atomically as JSON,
-- LP40, LP60, dry-fire, and free-training sessions,
+- LP20, LP40, LP60, dry-fire, and free-training sessions,
 - relative shot rankings and progress across a complete session,
 - comparison with up to five earlier sessions of the same program,
-- Excel-compatible CSV and print-ready PDF exports,
+- Excel-compatible CSV, raw JSON, and print-ready PDF exports,
 - adjustable trigger parameters and manual test triggering,
-- battery level, battery voltage, and charging status on iOS and Android.
+- battery level, battery voltage, and charging status on iOS and Android,
+- automatic German and English localization of the apps, status messages,
+  CSV tables, and PDF reports based on the phone language,
+- a `by Moritz Wenzel` credit in the settings screen.
 
 ## Project structure
 
@@ -49,14 +54,9 @@ AimTracerMVP/
 ### Hardware
 
 - Seeed Studio XIAO nRF52840 **Sense** (not the non-Sense variant),
-- a 402025 3.7 V LiPo connected to the battery pads via
-- a slide switch (8.6x4.3x4mm straight) as such https://www.berrybase.de/schiebeschalter-printmontage-on-on-2-stellig-8.6x4.3x4mm-gerade
-- The case (ShootingMonitorController.stl and the body that suits your needs) 
-- 4x M2*8 screws,
-- depending on the body either 2x M3\*25mm bolts and 2x nuts 
-- or for the 10mm weight calibration rail 2x M3\*(>8mm) inserts and 2x M3 bolts for clamping it to the rail. 
+- a 3.7 V LiPo connected to the battery pads,
+- a rigidly mounted enclosure,
 - a USB-C data cable for the initial flash.
-- some glue for the switch and if needed for the battery and the XIAO in the case
 
 ### Firmware
 
@@ -155,7 +155,7 @@ detailed instructions are available in
 1. Turn on the XIAO and place it on a stable surface.
 2. In the app's Live tab, connect to `AimTracer`.
 3. Wait until the app reports `Sensor ready`.
-4. Start a session and select a program such as `LP40`.
+4. Start a session and select a program such as `LP20` or `LP40`.
 5. Use a manual test trigger from the Calibration screen.
 6. After the post-trigger window, the shot appears with a blue pre-trigger
    trace and an orange post-trigger trace.
@@ -221,9 +221,12 @@ The Session screen can export:
 
 - a UTF-8 CSV using German Excel-compatible semicolon and decimal-comma
   formatting,
-- an A4 PDF with a summary, progress chart, and complete shot table.
+- an A4 PDF with a summary, progress chart, and complete shot table,
+- JSON containing every unmodified IMU/microphone sample and mounting metadata.
 
-The PDF also provides fields for the Meyton score and inner tens. The exact
+When a session is stopped, the app optionally asks for its Meyton total and
+includes it in the session view, CSV, JSON, and PDF. All 40 LP40 rows fit on
+one A4 table page. The exact
 calculation is documented in
 [`docs/ANALYSIS_AND_EXPORT.en.md`](docs/ANALYSIS_AND_EXPORT.en.md).
 
@@ -232,7 +235,8 @@ calculation is documented in
 Intentional placeholders are marked with `CALIBRATION:` in the code:
 
 - firmware: microphone, accelerometer, and gyro thresholds,
-- apps: mapping sensor axes to visible X/Y movement,
+- apps: fixed mounting profile with the PCB underside up, sensor side down,
+  and USB-C facing the shooter,
 - apps: equal weighting of the three metrics in the relative comparison
   index.
 
@@ -293,4 +297,4 @@ The included release was verified with:
 
 ## License
 
-Apache License 2.0. See `LICENSE`.
+MIT. See `LICENSE`.

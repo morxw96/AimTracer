@@ -6,6 +6,7 @@ enum class TrainingProgram(
     val title: String,
     val plannedShots: Int?
 ) {
+    LP20("LP20", 20),
     LP40("LP40", 40),
     LP60("LP60", 60),
     DRY_FIRE("Trockentraining", null),
@@ -112,5 +113,6 @@ data class TrainingSession(
     val endedAt: Long? = null,
     val name: String,
     val program: TrainingProgram = TrainingProgram.FREE_TRAINING,
+    val meytonScore: Double? = null,
     val shots: List<ShotCapture> = emptyList()
 )

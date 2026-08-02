@@ -14,7 +14,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,6 +26,7 @@ import de.aimtracer.android.ui.AimTracerTheme
 import de.aimtracer.android.ui.LiveScreen
 import de.aimtracer.android.ui.SessionsScreen
 import de.aimtracer.android.ui.SettingsScreen
+import de.aimtracer.android.ui.Text
 
 class MainActivity : ComponentActivity() {
     private val viewModel: AimTracerViewModel by viewModels()

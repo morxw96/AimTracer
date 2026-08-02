@@ -72,6 +72,8 @@ data class SessionSummary(
 
 object MotionAnalysis {
     const val GYRO_DPS_PER_LSB = 0.0175
+    const val MOUNTING_PROFILE_ID =
+        "xiao-sense-component-side-down-usb-toward-shooter"
 
     fun trace(shot: ShotCapture): List<TracePoint> {
         if (shot.samples.isEmpty() || shot.sampleRateHz <= 0) return emptyList()
@@ -79,9 +81,10 @@ object MotionAnalysis {
         var x = 0.0
         var y = 0.0
         val points = shot.samples.map { sample ->
-            // CALIBRATION: Board flat, USB-C points to the rear of the pistol.
-            x += sample.gz * GYRO_DPS_PER_LSB * dt
-            y += sample.gy * GYRO_DPS_PER_LSB * dt
+            // Seeed PCB rotation + ST package axes for the fixed enclosure:
+            // yaw right = -gz, pitch up = +gx, longitudinal roll = gy.
+            x += -sample.gz * GYRO_DPS_PER_LSB * dt
+            y += sample.gx * GYRO_DPS_PER_LSB * dt
             TracePoint(
                 x,
                 y,
@@ -106,8 +109,8 @@ object MotionAnalysis {
             val deltaMs = (current.uptimeMs - previous.uptimeMs)
             if (deltaMs !in 0 until 250) continue
             val dt = deltaMs / 1_000.0
-            x += current.gz * GYRO_DPS_PER_LSB * dt
-            y += current.gy * GYRO_DPS_PER_LSB * dt
+            x += -current.gz * GYRO_DPS_PER_LSB * dt
+            y += current.gx * GYRO_DPS_PER_LSB * dt
             points += TracePoint(x, y, (current.uptimeMs - start) / 1_000.0)
         }
         return points

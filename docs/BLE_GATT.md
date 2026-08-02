@@ -1,4 +1,6 @@
-    # AimTracer BLE-GATT-Spezifikation
+# AimTracer BLE-GATT-Spezifikation
+
+[English](BLE_GATT.en.md)
 
 Protokollversion: **1**
 

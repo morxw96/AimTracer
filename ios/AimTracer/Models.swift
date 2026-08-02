@@ -1,6 +1,7 @@
 import Foundation
 
 enum TrainingProgram: String, CaseIterable, Codable, Identifiable {
+    case lp20
     case lp40
     case lp60
     case dryFire
@@ -10,15 +11,17 @@ enum TrainingProgram: String, CaseIterable, Codable, Identifiable {
 
     var title: String {
         switch self {
+        case .lp20: "LP20"
         case .lp40: "LP40"
         case .lp60: "LP60"
-        case .dryFire: "Trockentraining"
-        case .freeTraining: "Freies Training"
+        case .dryFire: L10n.text("Trockentraining")
+        case .freeTraining: L10n.text("Freies Training")
         }
     }
 
     var plannedShotCount: Int? {
         switch self {
+        case .lp20: 20
         case .lp40: 40
         case .lp60: 60
         case .dryFire, .freeTraining: nil
@@ -35,9 +38,9 @@ enum TriggerMode: UInt8, CaseIterable, Codable, Identifiable {
 
     var title: String {
         switch self {
-        case .audio: "Nur Mikrofon"
-        case .motion: "Nur Bewegung"
-        case .audioAndMotion: "Mikrofon + Bewegung"
+        case .audio: L10n.text("Nur Mikrofon")
+        case .motion: L10n.text("Nur Bewegung")
+        case .audioAndMotion: L10n.text("Mikrofon + Bewegung")
         }
     }
 }
@@ -174,6 +177,8 @@ struct TrainingSession: Codable, Hashable, Identifiable {
     var name: String
     // Optional keeps sessions.json from AimTracer 0.1 backward compatible.
     var program: TrainingProgram?
+    // Optional keeps sessions written before Meyton pairing backward compatible.
+    var meytonScore: Double?
     var shots: [ShotCapture]
 
     init(
@@ -182,6 +187,7 @@ struct TrainingSession: Codable, Hashable, Identifiable {
         endedAt: Date? = nil,
         name: String,
         program: TrainingProgram? = nil,
+        meytonScore: Double? = nil,
         shots: [ShotCapture] = []
     ) {
         self.id = id
@@ -189,6 +195,7 @@ struct TrainingSession: Codable, Hashable, Identifiable {
         self.endedAt = endedAt
         self.name = name
         self.program = program
+        self.meytonScore = meytonScore
         self.shots = shots
     }
 
