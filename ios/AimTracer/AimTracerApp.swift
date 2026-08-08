@@ -10,6 +10,7 @@ struct AimTracerApp: App {
                 .environmentObject(model)
                 .environmentObject(model.bluetooth)
                 .environmentObject(model.sessions)
+                .environmentObject(model.axisDisplay)
         }
     }
 }

@@ -19,6 +19,11 @@ object L10n {
             Regex("^Paket (\\d+)$") to "Packet \$1",
             Regex("^Session beenden • (.+)$") to "End session • \$1",
             Regex("^Vergleich mit (\\d+) Schüssen$") to "Compared with \$1 shots",
+            Regex("^Einlernphase (\\d+)/(\\d+)$") to
+                "Learning phase \$1/\$2",
+            Regex(
+                "^Technikindex: (.+) / 100  •  Baseline: (\\d+)/(\\d+) Sessions$"
+            ) to "Technique index: \$1 / 100  •  Baseline: \$2/\$3 sessions",
             Regex("^Letzte (\\d+) gegen erste (\\d+) Schüsse$") to
                 "Last \$1 versus first \$2 shots",
             Regex("^Schuss (\\d+)$") to "Shot \$1",
@@ -87,6 +92,30 @@ object L10n {
         "Abzugsverhalten" to "Trigger behaviour",
         "Nachhalten" to "Follow-through",
         "Einordnung in dieser Session" to "Ranking in this session",
+        "Technikindex dieses Schusses" to "Technique index for this shot",
+        "50 entspricht deiner persönlichen Referenz" to
+            "50 matches your personal reference",
+        "Technikindex" to "Technique index",
+        "Technik" to "Technique",
+        "Technik Halten (30 %)" to "Hold technique (30%)",
+        "Technik Abzug (50 %)" to "Trigger technique (50%)",
+        "Technik Nachhalten (20 %)" to "Follow-through technique (20%)",
+        "Baseline" to "Baseline",
+        "Persönliche Baseline bereit" to "Personal baseline ready",
+        "Langzeitentwicklung" to "Long-term development",
+        "Technikindex der letzten Sessions" to
+            "Technique index across recent sessions",
+        "älteste" to "oldest",
+        "neueste" to "newest",
+        "50 = persönliche Referenz" to "50 = personal reference",
+        "Technikindex relativ zur persönlichen Baseline" to
+            "Technique index relative to the personal baseline",
+        "Werte über 50 bedeuten weniger Bewegung als in deiner Einlern-Baseline. Der Index ist keine Ringzahl." to
+            "Values above 50 mean less movement than in your learning baseline. The index is not a target score.",
+        "Der Technikindex gewichtet Halten mit 30 %, Abzug mit 50 % und Nachhalten mit 20 %. Er ist keine Ringzahl." to
+            "The technique index weights hold at 30%, trigger at 50%, and follow-through at 20%. It is not a target score.",
+        "AimTracer misst relative Winkelbewegung; RMS, Rang und Technikindex sind keine Ringzahl." to
+            "AimTracer measures relative angular movement; RMS, ranks, and the technique index are not target scores.",
         "Sensor bereit" to "Sensor ready",
         "Gerät ruhig halten, bis die Nullung fertig ist" to
             "Keep the device still until calibration is complete",
@@ -167,8 +196,10 @@ object L10n {
         "Manuellen Testtrigger setzen" to "Create manual test trigger",
         "CALIBRATION: Die Startwerte müssen mit montiertem Gehäuse an der LP300XT anhand echter Schüsse und Trockentraining geprüft werden." to
             "CALIBRATION: Verify the starting values with the enclosure mounted on the LP300XT using live shots and dry fire.",
-        "Festes Montageprofil: Platinenunterseite oben, Sensorseite unten, USB-C zum Schützen. Rohdaten werden unverändert exportiert; die Anzeige nutzt rechts = -gz, oben = gx und Rollen = gy." to
-            "Fixed mounting profile: PCB underside up, sensor side down and USB-C toward the shooter. Raw data is exported unchanged; the display uses right = -gz, up = gx and roll = gy.",
+        "X-Achse invertieren" to "Invert X axis",
+        "Y-Achse invertieren" to "Invert Y axis",
+        "Festes Montageprofil: Platinenunterseite oben, Sensorseite unten, USB-C zum Schützen. Rohdaten werden unverändert exportiert; die Anzeige nutzt standardmäßig rechts = +gz, oben = +gy und Rollen = gx. X/Y-Invertierung verändert nur den Graphen, nicht die Scores." to
+            "Fixed mounting profile: PCB underside up, sensor side down and USB-C toward the shooter. Raw data is exported unchanged; by default the display uses right = +gz, up = +gy and roll = gx. X/Y inversion changes only the graph, not the scores.",
         "Über AimTracer" to "About AimTracer",
         "App-Version" to "App version",
         "by Moritz Wenzel" to "by Moritz Wenzel",

@@ -24,7 +24,7 @@ version 1.
 1. Flash the firmware from `firmware/AimTracerFirmware` onto the XIAO again.
 2. Build and install the current iPhone or Android app.
 3. Completely restart both the XIAO and the app.
-4. Reconnect and verify `Firmware 0.5` in the lower part of the Live screen.
+4. Reconnect and verify `Firmware 0.6` in the lower part of the Live screen.
 5. Start a dry-fire session and first issue a manual test trigger.
 6. Wait until `Transfer` returns to `Ready`.
 7. Open the session. With firmware 0.4 or later, the test shot should contain
@@ -36,7 +36,7 @@ roughly one to two seconds of BLE transfer, depending on the connection
 interval. Do not end the session during transfer, and wait for `Ready` before
 the next test.
 
-If the message occurs again with firmware 0.5, it reports the received and
+If the message occurs again with firmware 0.6, it reports the received and
 expected sample counts and the first missing index. Record those three values
 together with the displayed firmware version.
 

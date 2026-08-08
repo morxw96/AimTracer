@@ -16,15 +16,20 @@ precision.
 4. Slowly move the pistol left/right and up/down.
 5. Verify that the trace moves in the expected direction.
 
-AimTracer now uses one fixed mounting profile: PCB underside up, sensor and
-component side down, and USB-C facing the shooter. The chip rotation in the
-official Seeed PCB together with ST's axis diagram yields `gy` for roll,
-`-gz` for right, and `gx` for up. Stored and exported raw values are not
+AimTracer uses one fixed mounting profile: PCB underside up, sensor and
+component side down, and USB-C facing the shooter. A practical test on the
+mounted device identifies `gx` as roll around the barrel, `+gz` as right,
+and `+gy` as up. Stored and exported raw values are not
 modified.
 
-The three RMS metrics use the magnitude across all axes and therefore remain
-unchanged by a sign inversion. The mounting mapping still matters for trace
-direction and future direction-sensitive metrics.
+Starting with app 0.7.2, the horizontal X and vertical Y graph axes can be
+inverted independently in Settings. This supports alternate mounting
+orientations and changes only the graph. RMS metrics, rankings, and the
+technique index remain unaffected.
+
+The three RMS metrics use pitch and yaw (`gy` and `gz`). Roll (`gx`) remains
+in raw data but is excluded from the technique index, keeping the rating
+focused on movement of the sight line.
 
 ## 2. Gyro zero
 
@@ -78,9 +83,11 @@ Recommended procedure:
 ## 5. Evaluation
 
 The app's three RMS values are measurements in degrees per second, not score
-predictions. AimTracer 0.2 ranks shots only relative to other shots within the
-same session. Change time windows or weighting based on real Meyton results
-only after recording several of your own sessions.
+predictions. The AimTracer 0.7 technique index uses the first three sessions
+of each program as a personal reference. Until then it runs in a learning
+phase with 50 as the neutral starting point. Time windows, exponent, and
+weights remain marked `CALIBRATION:` and should only change after more paired
+range data.
 
 The sensor knows neither the target nor the sight line. It can show relative
 muzzle movement, the release impulse, and follow-through, but it cannot

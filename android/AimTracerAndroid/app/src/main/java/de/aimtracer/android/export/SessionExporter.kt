@@ -10,6 +10,7 @@ import de.aimtracer.android.L10n
 import de.aimtracer.android.analysis.MetricComparison
 import de.aimtracer.android.analysis.MetricStatistics
 import de.aimtracer.android.analysis.MotionAnalysis
+import de.aimtracer.android.analysis.AxisDisplayConfiguration
 import de.aimtracer.android.analysis.SessionAnalysis
 import de.aimtracer.android.analysis.ShotStanding
 import de.aimtracer.android.model.TrainingSession
@@ -31,12 +32,16 @@ object SessionExporter {
 
     fun csv(
         session: TrainingSession,
-        previousSessions: List<TrainingSession>
+        allSessions: List<TrainingSession>
     ): ByteArray {
         require(session.shots.isNotEmpty()) {
             L10n.text("Session enthält keine Schüsse.")
         }
-        val summary = SessionAnalysis.summary(session)
+        val summary = SessionAnalysis.summary(session, allSessions)
+        val previousSessions = SessionAnalysis.previousComparable(
+            session,
+            allSessions
+        )
         val comparison = SessionAnalysis.comparison(session, previousSessions)
         val rows = mutableListOf<List<String>>(
             listOf("AimTracer Trainingsprotokoll"),
@@ -52,6 +57,18 @@ object SessionExporter {
             listOf(
                 "Meyton-Gesamtergebnis",
                 session.meytonScore?.let(::score).orEmpty()
+            ),
+            listOf("Technikindex", number(summary.techniqueIndex, 1)),
+            listOf("Technik Halten (30 %)", number(summary.holdScore, 1)),
+            listOf("Technik Abzug (50 %)", number(summary.triggerScore, 1)),
+            listOf(
+                "Technik Nachhalten (20 %)",
+                number(summary.followThroughScore, 1)
+            ),
+            listOf(
+                "Baseline",
+                "${summary.baseline.sourceSessionCount}/" +
+                    "${summary.baseline.targetSessionCount} Sessions"
             ),
             emptyList(),
             listOf(
@@ -84,7 +101,7 @@ object SessionExporter {
             "Geräte-ID",
             "Zeit",
             "Gesamtrang",
-            "Vergleichsindex",
+            "Technikindex",
             "Ruhig halten (°/s RMS)",
             "Rang Halten",
             "Abzugsverhalten (°/s RMS)",
@@ -101,7 +118,7 @@ object SessionExporter {
                 standing.shot.deviceShotId.toString(),
                 time.format(Date(standing.shot.receivedAt)),
                 standing.overallRank.toString(),
-                number(standing.comparisonIndex, 1),
+                number(standing.techniqueIndex, 1),
                 number(standing.metrics.holdRms),
                 standing.holdRank.toString(),
                 number(standing.metrics.triggerRms),
@@ -116,9 +133,9 @@ object SessionExporter {
         rows.add(emptyList())
         rows += listOf(
             "Hinweis",
-            "Niedrigere RMS-Werte bedeuten weniger Winkelbewegung. Rang und " +
-                "Vergleichsindex gelten nur innerhalb dieser Session und sind " +
-                "keine Ringzahl."
+            "Niedrigere RMS-Werte bedeuten weniger Winkelbewegung. Der " +
+                "Technikindex nutzt die persönliche Baseline (Halten 30 %, " +
+                "Abzug 50 %, Nachhalten 20 %) und ist keine Ringzahl."
         )
 
         val text = rows.joinToString("\r\n") { row ->
@@ -130,14 +147,14 @@ object SessionExporter {
 
     fun pdf(
         session: TrainingSession,
-        previousSessions: List<TrainingSession>
+        allSessions: List<TrainingSession>
     ): ByteArray {
         require(session.shots.isNotEmpty()) {
             L10n.text("Session enthält keine Schüsse.")
         }
         val document = PdfDocument()
         try {
-            val report = PdfReport(document, session, previousSessions)
+            val report = PdfReport(document, session, allSessions)
             report.draw()
             return ByteArrayOutputStream().use { output ->
                 document.writeTo(output)
@@ -154,7 +171,10 @@ object SessionExporter {
     fun pdfFileName(session: TrainingSession) =
         "${safeName(session.name)}-${L10n.text("Bericht")}.pdf"
 
-    fun rawJson(session: TrainingSession): ByteArray {
+    fun rawJson(
+        session: TrainingSession,
+        axes: AxisDisplayConfiguration = AxisDisplayConfiguration()
+    ): ByteArray {
         require(session.shots.isNotEmpty()) {
             L10n.text("Session enthält keine Schüsse.")
         }
@@ -174,9 +194,19 @@ object SessionExporter {
                     "Unmodified LSM6DS3TR-C sensor coordinates"
                 )
                 put("analysisAxes", JSONObject().apply {
-                    put("roll", "gy")
-                    put("horizontalRight", "-gz")
-                    put("verticalUp", "gx")
+                    put("roll", "gx")
+                    put(
+                        "horizontalRight",
+                        if (axes.invertXAxis) "-gz" else "+gz"
+                    )
+                    put(
+                        "verticalUp",
+                        if (axes.invertYAxis) "-gy" else "+gy"
+                    )
+                })
+                put("displayInversion", JSONObject().apply {
+                    put("x", axes.invertXAxis)
+                    put("y", axes.invertYAxis)
                 })
             })
             put("session", rawSession(session))
@@ -308,7 +338,7 @@ object SessionExporter {
 private class PdfReport(
     private val document: PdfDocument,
     private val session: TrainingSession,
-    private val previousSessions: List<TrainingSession>
+    private val allSessions: List<TrainingSession>
 ) {
     private val width = 595
     private val height = 842
@@ -317,7 +347,11 @@ private class PdfReport(
     private val muted = Color.rgb(90, 99, 110)
     private val light = Color.rgb(242, 244, 244)
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val summary = SessionAnalysis.summary(session)
+    private val summary = SessionAnalysis.summary(session, allSessions)
+    private val previousSessions = SessionAnalysis.previousComparable(
+        session,
+        allSessions
+    )
     private val comparison = SessionAnalysis.comparison(
         session,
         previousSessions
@@ -400,6 +434,18 @@ private class PdfReport(
             comparisonRow(canvas, "Nachhalten", comparison.followThrough, 644f)
         }
 
+        text(
+            canvas,
+            "Technikindex: ${SessionExporter.number(summary.techniqueIndex, 1)} / 100" +
+                "  •  Baseline: ${summary.baseline.sourceSessionCount}/" +
+                "${summary.baseline.targetSessionCount} Sessions",
+            margin,
+            682f,
+            10f,
+            accent,
+            bold = true
+        )
+
         val meytonResult = session.meytonScore?.let {
             "Meyton-Gesamtergebnis: ${SessionExporter.number(
                 it,
@@ -418,7 +464,7 @@ private class PdfReport(
         text(
             canvas,
             "AimTracer misst relative Winkelbewegung; RMS, Rang und " +
-                "Vergleichsindex sind keine Ringzahl.",
+                "Technikindex sind keine Ringzahl.",
             margin,
             756f,
             8f,
@@ -578,7 +624,7 @@ private class PdfReport(
             "Nr." to 25f,
             "Zeit" to 58f,
             "Rang" to 40f,
-            "Index" to 55f,
+            "Technik" to 55f,
             "Halten" to 68f,
             "Abzug" to 68f,
             "Nachhalten" to 68f,
@@ -623,7 +669,7 @@ private class PdfReport(
         standing.ordinal.toString(),
         TIME_FORMAT.format(Date(standing.shot.receivedAt)),
         standing.overallRank.toString(),
-        SessionExporter.number(standing.comparisonIndex, 1),
+        SessionExporter.number(standing.techniqueIndex, 1),
         SessionExporter.number(standing.metrics.holdRms, 2),
         SessionExporter.number(standing.metrics.triggerRms, 2),
         SessionExporter.number(standing.metrics.followThroughRms, 2),

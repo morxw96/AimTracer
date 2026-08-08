@@ -15,15 +15,20 @@ Scheingenauigkeit.
 4. Die Pistole langsam nach links/rechts und oben/unten bewegen.
 5. Prüfen, ob die Spur erwartungsgemäß läuft.
 
-AimTracer verwendet jetzt ein festes Montageprofil: Platinenunterseite nach
-oben, Sensor-/Bestückungsseite nach unten und USB-C zum Schützen. Aus der
-Chiprotation im offiziellen Seeed-PCB und dem ST-Achsdiagramm folgt:
-`gy` ist Rollen, `-gz` ist rechts und `gx` ist oben. Die
-gespeicherten und exportierten Rohwerte werden dabei nicht verändert.
+AimTracer verwendet ein festes Montageprofil: Platinenunterseite nach oben,
+Sensor-/Bestückungsseite nach unten und USB-C zum Schützen. Der Praxistest am
+montierten Gerät ergibt: `gx` ist Rollen um die Laufachse, `+gz` ist rechts
+und `+gy` ist oben. Die gespeicherten und exportierten
+Rohwerte werden dabei nicht verändert.
 
-Die drei RMS-Kennwerte verwenden den Betrag aller Achsen und bleiben deshalb
-bei einer reinen Vorzeichenänderung gleich. Die Montagezuordnung ist dennoch
-für die Richtung der Spur und künftige richtungsabhängige Bewertungen wichtig.
+Ab App 0.7.2 lassen sich die horizontale X- und vertikale Y-Achse in den
+Einstellungen getrennt invertieren. Das ist für alternative Montagen gedacht
+und verändert ausschließlich den Graphen. RMS-Kennwerte, Rankings und
+Technikindex bleiben davon unabhängig.
+
+Die drei RMS-Kennwerte verwenden Pitch und Yaw (`gy` und `gz`). Rollen (`gx`)
+bleibt in den Rohdaten, fließt aber nicht in den Technikindex ein. Damit
+bewertet der Index vorrangig Bewegungen der Visierlinie.
 
 ## 2. Gyro-Nullpunkt
 
@@ -78,9 +83,11 @@ Empfohlenes Vorgehen:
 ## 5. Bewertung
 
 Die drei RMS-Werte der App sind Messwerte in Grad pro Sekunde, keine
-Ringprognose. Das Ranking in AimTracer 0.2 ordnet Schüsse nur relativ innerhalb
-derselben Session ein. Erst nach mehreren eigenen Sessions sollten die
-Zeitfenster oder Gewichtung anhand realer Meyton-Ergebnisse verändert werden.
+Ringprognose. Der Technikindex in AimTracer 0.7 verwendet die ersten drei
+Sessions jedes Programms als persönliche Referenz. Bis dahin läuft eine
+Einlernphase mit 50 als neutralem Ausgangspunkt. Zeitfenster, Exponent und
+Gewichtung bleiben als `CALIBRATION:` markiert und sollten nur anhand weiterer
+realer Schießdaten verändert werden.
 
 Der Sensor kennt weder Zielscheibe noch Visierlinie. Er kann relative
 Mündungsbewegung, Auslöseimpuls und Nachhalten zeigen, aber keinen tatsächlichen

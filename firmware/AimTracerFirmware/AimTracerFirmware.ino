@@ -31,6 +31,9 @@ constexpr uint16_t kPdmBufferSamples = 256;
 constexpr uint16_t kTxIntervalMs = 1;
 constexpr uint16_t kStatusIntervalMs = 250;
 constexpr uint32_t kPowerIntervalMs = 1000;
+// CALIBRATION: inactivity means no shot, BLE command/config write, or
+// connection-state change. System OFF is entered only while running on LiPo.
+constexpr uint32_t kAutoSleepAfterMs = 2UL * 60UL * 60UL * 1000UL;
 
 // XIAO nRF52840 Sense pins in the Seeed mbed 2.9.3 variant:
 // D21 = P0.13/HICHG, D22 = P0.17/~CHG.
@@ -170,11 +173,16 @@ uint32_t lastStatusMs = 0;
 uint32_t lastPowerMs = 0;
 uint32_t lastLiveMs = 0;
 uint32_t lastTxMs = 0;
+uint32_t lastActivityMs = 0;
 uint16_t liveSequence = 0;
 uint16_t batteryMillivolts = 0;
 uint8_t batteryPercent = 0;
 bool batteryCharging = false;
 bool externalPowerPresent = false;
+
+void markActivity() {
+  lastActivityMs = millis();
+}
 
 uint8_t interpolatePercent(
     uint16_t millivolts,
@@ -462,6 +470,7 @@ void clearShotSlots() {
 
 void beginShotCapture(
     uint16_t audioPeak, uint16_t accelPeak, uint16_t gyroPeak) {
+  markActivity();
   ShotSlot* slot = freeShotSlot();
   if (slot == nullptr) {
     ++droppedTriggers;
@@ -852,6 +861,7 @@ void handleControl() {
   if (length < 1) {
     return;
   }
+  markActivity();
 
   switch (static_cast<Command>(bytes[0])) {
     case Command::StartSession:
@@ -890,6 +900,7 @@ void handleConfigWrite() {
   if (!configCharacteristic.written()) {
     return;
   }
+  markActivity();
   uint8_t bytes[AimTracerProtocol::kPacketSize] = {};
   const int length = configCharacteristic.readValue(bytes, sizeof(bytes));
   if (!applyConfig(bytes, length)) {
@@ -961,6 +972,46 @@ bool initializeBle() {
   return true;
 }
 
+[[noreturn]] void enterSystemOff() {
+  sessionActive = false;
+  armed = false;
+  PDM.end();
+
+  // ST power-down mode: all ODR bits in CTRL1_XL and CTRL2_G are zero.
+  imu.writeRegister(LSM6DS3_ACC_GYRO_CTRL1_XL, 0x00);
+  imu.writeRegister(LSM6DS3_ACC_GYRO_CTRL2_G, 0x00);
+
+  digitalWrite(LEDR, HIGH);
+  // Disconnect the battery-divider gate while sleeping. Auto-sleep is never
+  // entered with USB attached, so this cannot interfere with charging.
+  digitalWrite(PIN_VBAT_ENABLE, HIGH);
+  delay(5);
+
+  // nRF52840 System OFF disables CPU and radio. Waking performs a reset; on
+  // the finished device use the slide switch (off/on) or the XIAO reset key.
+  NRF_POWER->SYSTEMOFF = 1;
+  __DSB();
+  while (true) {
+    __WFE();
+  }
+}
+
+void serviceAutoSleep() {
+  const uint32_t now = millis();
+  // Read VBUS again at the decision point instead of relying on the last
+  // one-second power packet. This avoids a race when USB has just been
+  // connected at the two-hour boundary.
+  externalPowerPresent = readExternalPowerPresent();
+  if (externalPowerPresent ||
+      anySlotInState(SlotState::Capturing) ||
+      anySlotInState(SlotState::Sending)) {
+    return;
+  }
+  if (now - lastActivityMs >= kAutoSleepAfterMs) {
+    enterSystemOff();
+  }
+}
+
 void fatalBlink(uint8_t error) {
   lastError = error;
   pinMode(LEDR, OUTPUT);
@@ -978,6 +1029,7 @@ void setup() {
   pinMode(LEDR, OUTPUT);
   digitalWrite(LEDR, HIGH);
   initializePowerManagement();
+  markActivity();
 
   if (!initializeImu()) {
     fatalBlink(ErrorImuInit);
@@ -1000,6 +1052,7 @@ void loop() {
   const bool connected = BLE.connected();
   if (connected != wasConnected) {
     wasConnected = connected;
+    markActivity();
     digitalWrite(LEDR, connected ? LOW : HIGH);
     if (!connected) {
       sessionActive = false;
@@ -1012,5 +1065,6 @@ void loop() {
   publishLive();
   publishStatus();
   publishPowerStatus();
+  serviceAutoSleep();
   delay(1);
 }

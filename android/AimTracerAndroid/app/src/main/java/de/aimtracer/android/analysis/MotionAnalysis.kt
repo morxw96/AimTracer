@@ -19,6 +19,14 @@ data class ShotMetrics(
     val followThroughRms: Double
 )
 
+data class AxisDisplayConfiguration(
+    val invertXAxis: Boolean = false,
+    val invertYAxis: Boolean = false
+) {
+    val horizontalMultiplier: Double get() = if (invertXAxis) -1.0 else 1.0
+    val verticalMultiplier: Double get() = if (invertYAxis) -1.0 else 1.0
+}
+
 data class MetricStatistics(
     val mean: Double,
     val median: Double,
@@ -39,7 +47,27 @@ data class ShotStanding(
     val triggerRank: Int,
     val followThroughRank: Int,
     val overallRank: Int,
-    val comparisonIndex: Double
+    val holdScore: Double,
+    val triggerScore: Double,
+    val followThroughScore: Double,
+    val techniqueIndex: Double
+)
+
+data class TechniqueBaseline(
+    val sourceSessionCount: Int,
+    val targetSessionCount: Int,
+    val holdMedian: Double,
+    val triggerMedian: Double,
+    val followThroughMedian: Double
+) {
+    val isProvisional: Boolean get() = sourceSessionCount < targetSessionCount
+}
+
+data class TechniqueProgressPoint(
+    val id: String,
+    val date: Long,
+    val name: String,
+    val techniqueIndex: Double
 )
 
 data class MetricComparison(
@@ -67,24 +95,33 @@ data class SessionSummary(
     val hold: MetricStatistics,
     val trigger: MetricStatistics,
     val followThrough: MetricStatistics,
-    val trend: SessionTrend?
+    val trend: SessionTrend?,
+    val holdScore: Double,
+    val triggerScore: Double,
+    val followThroughScore: Double,
+    val techniqueIndex: Double,
+    val baseline: TechniqueBaseline
 )
 
 object MotionAnalysis {
     const val GYRO_DPS_PER_LSB = 0.0175
     const val MOUNTING_PROFILE_ID =
-        "xiao-sense-component-side-down-usb-toward-shooter"
+        "xiao-sense-component-side-down-usb-toward-shooter-v3"
 
-    fun trace(shot: ShotCapture): List<TracePoint> {
+    fun trace(
+        shot: ShotCapture,
+        axes: AxisDisplayConfiguration = AxisDisplayConfiguration()
+    ): List<TracePoint> {
         if (shot.samples.isEmpty() || shot.sampleRateHz <= 0) return emptyList()
         val dt = 1.0 / shot.sampleRateHz
         var x = 0.0
         var y = 0.0
         val points = shot.samples.map { sample ->
-            // Seeed PCB rotation + ST package axes for the fixed enclosure:
-            // yaw right = -gz, pitch up = +gx, longitudinal roll = gy.
-            x += -sample.gz * GYRO_DPS_PER_LSB * dt
-            y += sample.gx * GYRO_DPS_PER_LSB * dt
+            // Verified on the mounted AimTracer enclosure:
+            // yaw right = +gz, pitch up = +gy, longitudinal roll = gx.
+            // User inversion affects the graph only, never RMS scoring.
+            x += sample.gz * GYRO_DPS_PER_LSB * dt * axes.horizontalMultiplier
+            y += sample.gy * GYRO_DPS_PER_LSB * dt * axes.verticalMultiplier
             TracePoint(
                 x,
                 y,
@@ -97,7 +134,10 @@ object MotionAnalysis {
         }
     }
 
-    fun liveTrace(samples: List<LiveMotionSample>): List<TracePoint> {
+    fun liveTrace(
+        samples: List<LiveMotionSample>,
+        axes: AxisDisplayConfiguration = AxisDisplayConfiguration()
+    ): List<TracePoint> {
         if (samples.size < 2) return emptyList()
         val points = mutableListOf(TracePoint(0.0, 0.0, 0.0))
         var x = 0.0
@@ -109,8 +149,8 @@ object MotionAnalysis {
             val deltaMs = (current.uptimeMs - previous.uptimeMs)
             if (deltaMs !in 0 until 250) continue
             val dt = deltaMs / 1_000.0
-            x += -current.gz * GYRO_DPS_PER_LSB * dt
-            y += current.gx * GYRO_DPS_PER_LSB * dt
+            x += current.gz * GYRO_DPS_PER_LSB * dt * axes.horizontalMultiplier
+            y += current.gy * GYRO_DPS_PER_LSB * dt * axes.verticalMultiplier
             points += TracePoint(x, y, (current.uptimeMs - start) / 1_000.0)
         }
         return points
@@ -119,9 +159,12 @@ object MotionAnalysis {
     fun metrics(shot: ShotCapture): ShotMetrics {
         val rate = shot.sampleRateHz.coerceAtLeast(1)
         val trigger = shot.triggerIndex.coerceIn(0, shot.samples.size)
-        val holdEnd = (trigger - rate / 6).coerceAtLeast(0)
+        // CALIBRATION: Keep the hold and trigger windows separate.
+        val holdEnd = (trigger - (rate * 0.18).toInt()).coerceAtLeast(0)
         val triggerStart = (trigger - (rate * 0.15).toInt()).coerceAtLeast(0)
-        val triggerEnd = (trigger + (rate * 0.08).toInt())
+        val triggerEnd = (trigger + 1).coerceAtMost(shot.samples.size)
+        // The first 50 ms contain the pneumatic impulse, not follow-through.
+        val followStart = (trigger + (rate * 0.05).toInt())
             .coerceAtMost(shot.samples.size)
         val followEnd = (trigger + rate / 4).coerceAtMost(shot.samples.size)
         return ShotMetrics(
@@ -130,7 +173,7 @@ object MotionAnalysis {
                 shot.samples.subList(triggerStart, triggerEnd)
             ),
             followThroughRms = rms(
-                shot.samples.subList(trigger, followEnd)
+                shot.samples.subList(followStart, maxOf(followStart, followEnd))
             )
         )
     }
@@ -139,17 +182,26 @@ object MotionAnalysis {
         if (samples.isEmpty()) return 0.0
         return sqrt(
             samples.sumOf {
-                val x = it.gx * GYRO_DPS_PER_LSB
                 val y = it.gy * GYRO_DPS_PER_LSB
                 val z = it.gz * GYRO_DPS_PER_LSB
-                x * x + y * y + z * z
+                // Pitch/yaw move the sight line; roll remains in raw JSON.
+                y * y + z * z
             } / samples.size
         )
     }
 }
 
 object SessionAnalysis {
-    fun summary(session: TrainingSession): SessionSummary {
+    const val BASELINE_SESSION_TARGET = 3
+    const val HOLD_WEIGHT = 0.30
+    const val TRIGGER_WEIGHT = 0.50
+    const val FOLLOW_THROUGH_WEIGHT = 0.20
+    const val SCORE_EXPONENT = 3.0
+
+    fun summary(
+        session: TrainingSession,
+        allSessions: List<TrainingSession> = emptyList()
+    ): SessionSummary {
         val measured = session.shots.mapIndexed { index, shot ->
             Triple(shot, index + 1, MotionAnalysis.metrics(shot))
         }
@@ -159,15 +211,9 @@ object SessionAnalysis {
         val holdRanks = ranks(holdValues, true)
         val triggerRanks = ranks(triggerValues, true)
         val followRanks = ranks(followValues, true)
-        val count = measured.size
-        val indices = measured.indices.map { index ->
-            // CALIBRATION: Keep equal weights until paired Meyton data exists.
-            (
-                percentile(holdRanks[index], count) +
-                    percentile(triggerRanks[index], count) +
-                    percentile(followRanks[index], count)
-                ) / 3.0
-        }
+        val baseline = techniqueBaseline(session, allSessions)
+        val scores = measured.map { componentScores(it.third, baseline) }
+        val indices = scores.map { it.overall }
         val overallRanks = ranks(indices, false)
         val standings = measured.indices.map { index ->
             ShotStanding(
@@ -178,7 +224,10 @@ object SessionAnalysis {
                 triggerRank = triggerRanks[index],
                 followThroughRank = followRanks[index],
                 overallRank = overallRanks[index],
-                comparisonIndex = indices[index]
+                holdScore = scores[index].hold,
+                triggerScore = scores[index].trigger,
+                followThroughScore = scores[index].follow,
+                techniqueIndex = scores[index].overall
             )
         }
         return SessionSummary(
@@ -186,9 +235,30 @@ object SessionAnalysis {
             hold = statistics(holdValues),
             trigger = statistics(triggerValues),
             followThrough = statistics(followValues),
-            trend = trend(measured.map { it.third })
+            trend = trend(measured.map { it.third }),
+            holdScore = scores.map { it.hold }.meanOr(50.0),
+            triggerScore = scores.map { it.trigger }.meanOr(50.0),
+            followThroughScore = scores.map { it.follow }.meanOr(50.0),
+            techniqueIndex = indices.meanOr(50.0),
+            baseline = baseline
         )
     }
+
+    fun progress(
+        session: TrainingSession,
+        allSessions: List<TrainingSession>
+    ): List<TechniqueProgressPoint> =
+        allSessions
+            .filter { it.program == session.program && it.shots.isNotEmpty() }
+            .sortedBy { it.startedAt }
+            .map { candidate ->
+                TechniqueProgressPoint(
+                    id = candidate.id,
+                    date = candidate.startedAt,
+                    name = candidate.name,
+                    techniqueIndex = summary(candidate, allSessions).techniqueIndex
+                )
+            }
 
     fun previousComparable(
         session: TrainingSession,
@@ -210,8 +280,9 @@ object SessionAnalysis {
         previous: List<TrainingSession>
     ): SessionComparison? {
         if (session.shots.isEmpty() || previous.isEmpty()) return null
-        val current = summary(session)
-        val references = previous.map(::summary)
+        val context = previous + session
+        val current = summary(session, context)
+        val references = previous.map { summary(it, context) }
         return SessionComparison(
             referenceSessionCount = previous.size,
             hold = compare(current.hold.mean, references.map { it.hold.mean }.mean()),
@@ -233,9 +304,64 @@ object SessionAnalysis {
             }
         }
 
-    private fun percentile(rank: Int, count: Int): Double =
-        if (count <= 1) 100.0
-        else 100.0 * (count - rank) / (count - 1)
+    private data class ComponentScores(
+        val hold: Double,
+        val trigger: Double,
+        val follow: Double,
+        val overall: Double
+    )
+
+    private fun techniqueBaseline(
+        session: TrainingSession,
+        allSessions: List<TrainingSession>
+    ): TechniqueBaseline {
+        val candidates = if (allSessions.any { it.id == session.id }) {
+            allSessions
+        } else {
+            allSessions + session
+        }
+        val sources = candidates
+            .filter {
+                it.program == session.program &&
+                    it.endedAt != null &&
+                    it.shots.size >= 3
+            }
+            .sortedBy { it.startedAt }
+            .take(BASELINE_SESSION_TARGET)
+        val metrics = sources.flatMap { source ->
+            source.shots.map(MotionAnalysis::metrics)
+        }
+        return TechniqueBaseline(
+            sourceSessionCount = sources.size,
+            targetSessionCount = BASELINE_SESSION_TARGET,
+            holdMedian = metrics.map { it.holdRms }.median(),
+            triggerMedian = metrics.map { it.triggerRms }.median(),
+            followThroughMedian = metrics.map { it.followThroughRms }.median()
+        )
+    }
+
+    private fun componentScores(
+        metrics: ShotMetrics,
+        baseline: TechniqueBaseline
+    ): ComponentScores {
+        val hold = score(metrics.holdRms, baseline.holdMedian)
+        val trigger = score(metrics.triggerRms, baseline.triggerMedian)
+        val follow = score(metrics.followThroughRms, baseline.followThroughMedian)
+        return ComponentScores(
+            hold,
+            trigger,
+            follow,
+            hold * HOLD_WEIGHT +
+                trigger * TRIGGER_WEIGHT +
+                follow * FOLLOW_THROUGH_WEIGHT
+        )
+    }
+
+    private fun score(value: Double, reference: Double): Double {
+        if (value <= 0 || reference <= 0) return 50.0
+        return (100.0 / (1.0 + (value / reference).pow(SCORE_EXPONENT)))
+            .coerceIn(0.0, 100.0)
+    }
 
     private fun statistics(values: List<Double>): MetricStatistics {
         if (values.isEmpty()) return MetricStatistics.EMPTY
@@ -255,6 +381,17 @@ object SessionAnalysis {
             best = sorted.first(),
             worst = sorted.last()
         )
+    }
+
+    private fun List<Double>.median(): Double {
+        if (isEmpty()) return 0.0
+        val sorted = sorted()
+        val middle = sorted.size / 2
+        return if (sorted.size % 2 == 0) {
+            (sorted[middle - 1] + sorted[middle]) / 2
+        } else {
+            sorted[middle]
+        }
     }
 
     private fun trend(metrics: List<ShotMetrics>): SessionTrend? {
@@ -288,4 +425,7 @@ object SessionAnalysis {
 
     private fun List<Double>.mean(): Double =
         if (isEmpty()) 0.0 else sum() / size
+
+    private fun List<Double>.meanOr(fallback: Double): Double =
+        if (isEmpty()) fallback else sum() / size
 }

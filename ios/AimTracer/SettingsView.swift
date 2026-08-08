@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var bluetooth: BLEManager
+    @EnvironmentObject private var axisDisplay: AxisDisplayPreferences
     @State private var draft = DeviceConfiguration.default
 
     var body: some View {
@@ -74,13 +75,22 @@ struct SettingsView: View {
             }
 
             Section("Montage") {
+                Toggle(
+                    "X-Achse invertieren",
+                    isOn: $axisDisplay.invertXAxis
+                )
+                Toggle(
+                    "Y-Achse invertieren",
+                    isOn: $axisDisplay.invertYAxis
+                )
                 Text(
                     L10n.text(
                         "Festes AimTracer-Profil: Platinenunterseite nach oben, "
                             + "Sensor-/Bestückungsseite nach unten und USB-C zum "
                             + "Schützen. Die Rohdaten bleiben unverändert; die App "
-                            + "zeigt rechts als -gz und oben als gx an; gy ist die "
-                            + "Rollachse."
+                            + "zeigt standardmäßig rechts als +gz und oben als +gy "
+                            + "an; gx ist die Rollachse. X/Y-Invertierung verändert "
+                            + "nur den Graphen, nicht die Scores."
                     )
                 )
             }

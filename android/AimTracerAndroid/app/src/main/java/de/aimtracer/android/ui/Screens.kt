@@ -36,6 +36,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -170,16 +171,23 @@ fun LiveScreen(
             }
         }
 
-        TraceCard(lastShot, ble.liveSamples)
+        TraceCard(
+            lastShot,
+            ble.liveSamples,
+            viewModel.axisDisplayConfiguration
+        )
 
         if (lastShot != null) {
             val metrics = MotionAnalysis.metrics(lastShot)
             ShotMetricsRow(metrics)
             active?.let { session ->
-                SessionAnalysis.summary(session).standings
+                SessionAnalysis.summary(
+                    session,
+                    sessions.sessions
+                ).standings
                     .firstOrNull { it.shot.id == lastShot.id }
                     ?.let {
-                        LiveStandingCard(it, session.shots.size)
+                        LiveStandingCard(it)
                     }
             }
         }
@@ -532,6 +540,7 @@ fun SessionsScreen(
         items(viewModel.sessions.sessions, key = { it.id }) { session ->
             SessionListCard(
                 session = session,
+                allSessions = viewModel.sessions.sessions,
                 onOpen = { selectedSessionId = session.id },
                 onDelete = { viewModel.sessions.deleteSession(session.id) }
             )
@@ -542,10 +551,11 @@ fun SessionsScreen(
 @Composable
 private fun SessionListCard(
     session: TrainingSession,
+    allSessions: List<TrainingSession>,
     onOpen: () -> Unit,
     onDelete: () -> Unit
 ) {
-    val summary = SessionAnalysis.summary(session)
+    val summary = SessionAnalysis.summary(session, allSessions)
     Card(Modifier.fillMaxWidth().clickable(onClick = onOpen)) {
         Column(Modifier.padding(15.dp)) {
             Row(
@@ -599,7 +609,9 @@ private fun SessionDetail(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val summary = SessionAnalysis.summary(session)
+    val allSessions = viewModel.sessions.sessions
+    val summary = SessionAnalysis.summary(session, allSessions)
+    val progress = SessionAnalysis.progress(session, allSessions)
     val previous = SessionAnalysis.previousComparable(
         session,
         viewModel.sessions.sessions
@@ -715,6 +727,84 @@ private fun SessionDetail(
             }
             item {
                 Card(Modifier.fillMaxWidth()) {
+                    Column(
+                        Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    "Technikindex",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    if (summary.baseline.isProvisional) {
+                                        "Einlernphase ${summary.baseline.sourceSessionCount}/" +
+                                            "${summary.baseline.targetSessionCount}"
+                                    } else {
+                                        "Persönliche Baseline bereit"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Text(
+                                decimal(summary.techniqueIndex, 0),
+                                style = MaterialTheme.typography.headlineLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            MetricTile(
+                                "Halten",
+                                summary.holdScore,
+                                Modifier.weight(1f),
+                                "30 %"
+                            )
+                            MetricTile(
+                                "Abzug",
+                                summary.triggerScore,
+                                Modifier.weight(1f),
+                                "50 %"
+                            )
+                            MetricTile(
+                                "Nachhalten",
+                                summary.followThroughScore,
+                                Modifier.weight(1f),
+                                "20 %"
+                            )
+                        }
+                    }
+                }
+            }
+            item {
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp)) {
+                        SectionTitle(
+                            "Langzeitentwicklung",
+                            "Technikindex der letzten Sessions"
+                        )
+                        TechniqueProgressChart(progress)
+                        Text(
+                            "Werte über 50 bedeuten weniger Bewegung als in " +
+                                "deiner Einlern-Baseline. Der Index ist keine Ringzahl.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            item {
+                Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         SectionTitle("Verlauf", "°/s RMS je Schuss")
                         SessionTrendChart(summary.standings)
@@ -727,7 +817,10 @@ private fun SessionDetail(
                 OutlinedButton(
                     onClick = {
                         runCatching {
-                            SessionExporter.rawJson(session)
+                            SessionExporter.rawJson(
+                                session,
+                                viewModel.axisDisplayConfiguration
+                            )
                         }.onSuccess {
                             pendingJson = it
                             jsonLauncher.launch(
@@ -760,7 +853,7 @@ private fun SessionDetail(
                     OutlinedButton(
                         onClick = {
                             runCatching {
-                                SessionExporter.csv(session, previous)
+                                SessionExporter.csv(session, allSessions)
                             }.onSuccess {
                                 pendingCsv = it
                                 csvLauncher.launch(
@@ -777,7 +870,7 @@ private fun SessionDetail(
                     Button(
                         onClick = {
                             runCatching {
-                                SessionExporter.pdf(session, previous)
+                                SessionExporter.pdf(session, allSessions)
                             }.onSuccess {
                                 pendingPdf = it
                                 pdfLauncher.launch(
@@ -796,7 +889,7 @@ private fun SessionDetail(
             item {
                 SectionTitle(
                     "Schussranking",
-                    "Relativer Vergleich innerhalb dieser Session"
+                    "Technikindex relativ zur persönlichen Baseline"
                 )
                 Row(
                     Modifier.fillMaxWidth().padding(top = 7.dp),
@@ -840,8 +933,8 @@ private fun SessionDetail(
             }
             item {
                 Text(
-                    "Der Vergleichsindex kombiniert Halten, Abzug und " +
-                        "Nachhalten gleichgewichtet. Er ist keine Ringzahl.",
+                    "Der Technikindex gewichtet Halten mit 30 %, Abzug mit " +
+                        "50 % und Nachhalten mit 20 %. Er ist keine Ringzahl.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -941,11 +1034,11 @@ private fun StandingCard(
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        decimal(standing.comparisonIndex, 0),
+                        decimal(standing.techniqueIndex, 0),
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        "Vergleich",
+                        "Technik",
                         style = MaterialTheme.typography.labelSmall
                     )
                 }
@@ -1079,11 +1172,38 @@ fun SettingsScreen(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp)) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("X-Achse invertieren")
+                    Switch(
+                        checked = viewModel.invertXAxis,
+                        onCheckedChange = viewModel::setInvertXAxis
+                    )
+                }
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Y-Achse invertieren")
+                    Switch(
+                        checked = viewModel.invertYAxis,
+                        onCheckedChange = viewModel::setInvertYAxis
+                    )
+                }
+            }
+        }
         Text(
             "Festes Montageprofil: Platinenunterseite oben, Sensorseite " +
                 "unten, USB-C zum Schützen. Rohdaten werden unverändert " +
-                "exportiert; die Anzeige nutzt rechts = -gz, oben = gx und " +
-                "Rollen = gy.",
+                "exportiert; die Anzeige nutzt standardmäßig rechts = +gz, " +
+                "oben = +gy und Rollen = gx. X/Y-Invertierung verändert " +
+                "nur den Graphen, nicht die Scores.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

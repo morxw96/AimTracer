@@ -114,7 +114,7 @@ All values that intentionally require practical tuning are marked
   facing the shooter,
 - audio, accelerometer, and gyro thresholds in the firmware or Calibration
   tab,
-- equal weighting of the three metrics in the comparison index.
+- personal-baseline exponent and 30/50/20 technique-index weighting.
 
 The procedure for a mounted device is documented in
 [`../../docs/CALIBRATION.en.md`](../../docs/CALIBRATION.en.md).
@@ -131,6 +131,6 @@ other network functionality.
 - Gradle 8.12,
 - Android Gradle Plugin 8.5.1,
 - Kotlin 2.0.21,
-- app 0.6.0,
+- app 0.7.2,
 - compileSdk/targetSdk 35 and minSdk 26,
 - clean `testDebugUnitTest`, `assembleDebug`, and `lintDebug` runs.

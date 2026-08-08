@@ -114,7 +114,7 @@ Alle bewusst noch praktisch zu bestimmenden Werte sind im Code mit
   zum Schützen,
 - Audio-, Accel- und Gyro-Schwellen in der Firmware beziehungsweise im
   Kalibrierungs-Tab,
-- gleichgewichtete Zusammenführung der drei Kennwerte zum Vergleichsindex.
+- Exponent der persönlichen Baseline und 30/50/20-Gewichtung des Technikindex.
 
 Die Schritte am montierten Gerät stehen in
 [`../../docs/CALIBRATION.md`](../../docs/CALIBRATION.md).
@@ -131,6 +131,6 @@ Cloud- oder sonstige Netzwerkfunktion.
 - Gradle 8.12,
 - Android Gradle Plugin 8.5.1,
 - Kotlin 2.0.21,
-- App 0.6.0,
+- App 0.7.2,
 - compileSdk/targetSdk 35, minSdk 26,
 - sauberer `testDebugUnitTest`, `assembleDebug` und `lintDebug`-Lauf.

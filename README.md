@@ -2,7 +2,7 @@
 
 [Deutsch](README.de.md)
 
-Current release: app **0.6.0**, firmware **0.5**.
+Current release: app **0.7.2**, firmware **0.6**.
 
 AimTracer is an open-source trigger and hold-error monitor for the **Seeed
 Studio XIAO nRF52840 Sense**. The board measures pistol movement with its
@@ -24,11 +24,13 @@ The MVP includes:
 - full shot traces and hold, trigger, and follow-through metrics,
 - a local session history written atomically as JSON,
 - LP20, LP40, LP60, dry-fire, and free-training sessions,
-- relative shot rankings and progress across a complete session,
+- a personal 0–100 technique index and cross-session progress chart,
 - comparison with up to five earlier sessions of the same program,
 - Excel-compatible CSV, raw JSON, and print-ready PDF exports,
 - adjustable trigger parameters and manual test triggering,
 - battery level, battery voltage, and charging status on iOS and Android,
+- persistent X/Y graph inversion for alternate mounting orientations,
+- automatic nRF52840 System OFF after two hours without activity on battery,
 - automatic German and English localization of the apps, status messages,
   CSV tables, and PDF reports based on the phone language,
 - a `by Moritz Wenzel` credit in the settings screen.
@@ -169,7 +171,7 @@ Live screen reports firmware 0.2 or later.
 ## Battery and charging
 
 The BQ25101 charger operates independently of the firmware. Connecting USB-C
-charges the attached single-cell LiPo. Firmware 0.5 explicitly drives
+charges the attached single-cell LiPo. Firmware 0.6 explicitly drives
 `P0.13/HICHG` HIGH, selecting the conservative **50 mA** charge current. A
 500 mAh battery therefore takes roughly ten hours plus the slower final
 charging phase.
@@ -193,6 +195,12 @@ so it cannot become active without actual USB voltage. USB and charger-state
 changes are reported within about one second. If USB is present but the
 charger is not active, the apps display `USB connected` instead.
 
+When running on battery, firmware 0.6 enters nRF52840 System OFF after two
+hours without a shot, BLE command, settings write, or connection-state change.
+It first powers down the microphone and IMU. USB power suppresses automatic
+sleep. Since System OFF also disables Bluetooth, wake the finished device by
+cycling its slide switch off/on or pressing the XIAO reset button.
+
 ## Delay after a shot
 
 Trigger detection continues to run at 416 Hz. Firmware 0.4 and later retain
@@ -207,15 +215,22 @@ transfer, whose duration depends on the phone and BLE connection interval.
 
 ## Session analysis and export
 
-After every shot, the Live screen shows its rank for hold stability, trigger
-behavior, and follow-through within the active session. The Session screen
+After every shot, the Live screen shows its personal technique index for hold
+stability, trigger behavior, and follow-through. The Session screen
 contains:
 
 - mean and best value for each metric,
 - progress across all shots,
 - a comparison between the first and last group of up to ten shots,
 - a shot list sortable by sequence or rank,
-- a comparison with up to five earlier sessions of the same program.
+- a comparison with up to five earlier sessions of the same program,
+- a 0–100 long-term bar chart across the last twelve matching sessions.
+
+The first three completed sessions of each program form a personal baseline. Until it
+is complete, the app marks the index as a learning phase. `50` means that the
+movement equals the personal baseline; higher values indicate less movement.
+The combined index weights hold at 30%, trigger at 50%, and follow-through at
+20%. It is deliberately not a target-score prediction.
 
 The Session screen can export:
 
@@ -237,8 +252,8 @@ Intentional placeholders are marked with `CALIBRATION:` in the code:
 - firmware: microphone, accelerometer, and gyro thresholds,
 - apps: fixed mounting profile with the PCB underside up, sensor side down,
   and USB-C facing the shooter,
-- apps: equal weighting of the three metrics in the relative comparison
-  index.
+- apps: personal-baseline exponent and 30/50/20 technique-index weighting,
+- firmware: two-hour automatic-sleep interval.
 
 All trigger thresholds can be changed in the apps and are sent to the running
 firmware through the Config characteristic. In the MVP, they are not yet
@@ -261,12 +276,13 @@ Sessions are stored exclusively in the private app directory as
 - It is not a SCATT replacement and does not calculate an actual score.
 - Hold, trigger, and follow-through values are comparable RMS measurements,
   not sports-science-validated scores.
-- Rank and comparison index are valid only within a session and do not
-  predict hits or scores.
+- The personal technique index is comparable only within the same training
+  program and does not predict hits or target scores.
 - Automatic reconnection, background recording, BLE firmware updates, and
   persistent configuration are planned extensions.
-- Firmware and apps have been compile-tested; trigger thresholds and axis
-  mapping still require the intended practical test on a mounted device.
+- Firmware and apps have been compile-tested. Trigger thresholds still
+  require practical tuning; app 0.7.2 uses the mounting-tested default axes
+  `roll = gx`, `right = +gz`, and `up = +gy`, with optional graph inversion.
 
 ## Verification
 

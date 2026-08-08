@@ -18,7 +18,10 @@ struct SessionsView: View {
                         NavigationLink {
                             SessionDetailView(sessionID: session.id)
                         } label: {
-                            SessionRow(session: session)
+                            SessionRow(
+                                session: session,
+                                allSessions: store.sessions
+                            )
                         }
                         .swipeActions {
                             Button("Löschen", role: .destructive) {
@@ -35,9 +38,10 @@ struct SessionsView: View {
 
 private struct SessionRow: View {
     let session: TrainingSession
+    let allSessions: [TrainingSession]
 
     private var summary: SessionSummary {
-        SessionAnalysis.summary(for: session)
+        SessionAnalysis.summary(for: session, allSessions: allSessions)
     }
 
     var body: some View {
@@ -158,7 +162,14 @@ private struct SessionDetailView: View {
     }
 
     private func sessionList(_ session: TrainingSession) -> some View {
-        let summary = SessionAnalysis.summary(for: session)
+        let summary = SessionAnalysis.summary(
+            for: session,
+            allSessions: store.sessions
+        )
+        let progress = SessionAnalysis.progress(
+            for: session,
+            in: store.sessions
+        )
         let previous = SessionAnalysis.previousComparableSessions(
             for: session,
             in: store.sessions
@@ -177,6 +188,24 @@ private struct SessionDetailView: View {
             if !session.shots.isEmpty {
                 Section("Mittelwerte") {
                     SessionMetricSummary(summary: summary)
+                }
+
+                Section("Technikindex") {
+                    TechniqueIndexSummary(summary: summary)
+                }
+
+                Section("Langzeitentwicklung") {
+                    TechniqueProgressChart(points: progress)
+                        .frame(height: 220)
+                    Text(
+                        L10n.text(
+                            "50 entspricht deiner persönlichen Referenz. "
+                                + "Werte über 50 bedeuten weniger Bewegung als "
+                                + "in der Einlern-Baseline; der Index ist keine Ringzahl."
+                        )
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 }
 
                 Section("Verlauf") {
@@ -260,9 +289,10 @@ private struct SessionDetailView: View {
                 } footer: {
                     Text(
                         L10n.text(
-                            "Der Vergleichsindex kombiniert die drei relativen "
-                                + "Platzierungen gleichgewichtet. Er ist keine "
-                                + "Ringzahl und nur innerhalb dieser Session gültig. "
+                            "Der Technikindex gewichtet Halten mit 30 %, den "
+                                + "Abzug mit 50 % und Nachhalten mit 20 %. "
+                                + "Er vergleicht die Bewegung mit deiner persönlichen "
+                                + "Baseline und ist keine Ringzahl. "
                                 + "Fehlauslösungen lassen sich nach links wischen "
                                 + "und aus der Session löschen."
                         )
@@ -331,24 +361,125 @@ private struct SessionDetailView: View {
     private func prepareExports() {
         exportLinks = nil
         guard let session, !session.shots.isEmpty else { return }
-        let previous = SessionAnalysis.previousComparableSessions(
-            for: session,
-            in: store.sessions
-        )
         do {
             exportLinks = ExportLinks(
                 csv: try SessionExporter.makeExcelCSV(
                     session: session,
-                    previousSessions: previous
+                    allSessions: store.sessions
                 ),
                 pdf: try SessionExporter.makePDF(
                     session: session,
-                    previousSessions: previous
+                    allSessions: store.sessions
                 ),
                 json: try SessionExporter.makeRawJSON(session: session)
             )
         } catch {
             exportError = error.localizedDescription
+        }
+    }
+}
+
+private struct TechniqueIndexSummary: View {
+    let summary: SessionSummary
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(
+                    summary.techniqueIndex.formatted(
+                        .number.precision(.fractionLength(0))
+                    )
+                )
+                .font(.system(size: 38, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                Text("von 100")
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text(baselineLabel)
+                    .font(.caption.bold())
+                    .foregroundStyle(
+                        summary.baseline.isProvisional ? .orange : .mint
+                    )
+            }
+            Grid(horizontalSpacing: 12) {
+                GridRow {
+                    component("Halten", summary.holdScore, "30 %")
+                    component("Abzug", summary.triggerScore, "50 %")
+                    component("Nachhalten", summary.followThroughScore, "20 %")
+                }
+            }
+        }
+        .padding(.vertical, 5)
+    }
+
+    private var baselineLabel: String {
+        if summary.baseline.isProvisional {
+            return L10n.format(
+                "Einlernphase %d/%d",
+                summary.baseline.sourceSessionCount,
+                summary.baseline.targetSessionCount
+            )
+        }
+        return L10n.text("Baseline bereit")
+    }
+
+    private func component(
+        _ title: String,
+        _ value: Double,
+        _ weight: String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(L10n.text(title))
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text(value.formatted(.number.precision(.fractionLength(0))))
+                .font(.headline.monospacedDigit())
+            Text(weight)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct TechniqueProgressChart: View {
+    let points: [TechniqueProgressPoint]
+
+    private var visiblePoints: [TechniqueProgressPoint] {
+        Array(points.suffix(12))
+    }
+
+    var body: some View {
+        if visiblePoints.isEmpty {
+            Text("Noch keine Sessions für die Langzeitentwicklung.")
+                .foregroundStyle(.secondary)
+        } else {
+            Chart {
+                RuleMark(y: .value("Baseline", 50))
+                    .foregroundStyle(.secondary.opacity(0.55))
+                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [4]))
+                ForEach(Array(visiblePoints.enumerated()), id: \.element.id) {
+                    index, point in
+                    BarMark(
+                        x: .value("Session", index + 1),
+                        y: .value("Technikindex", point.techniqueIndex)
+                    )
+                    .foregroundStyle(
+                        point.techniqueIndex >= 50 ? Color.mint : Color.orange
+                    )
+                    .annotation(position: .top) {
+                        Text(
+                            point.techniqueIndex.formatted(
+                                .number.precision(.fractionLength(0))
+                            )
+                        )
+                        .font(.caption2.monospacedDigit())
+                    }
+                }
+            }
+            .chartYScale(domain: 0...100)
+            .chartYAxisLabel(L10n.text("Technikindex"))
+            .chartXAxisLabel(L10n.text("Sessions (älteste → neueste)"))
         }
     }
 }
@@ -594,12 +725,12 @@ private struct ShotStandingRow: View {
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
                 Text(
-                    standing.comparisonIndex.formatted(
+                    standing.techniqueIndex.formatted(
                         .number.precision(.fractionLength(0))
                     )
                 )
                 .font(.headline.monospacedDigit())
-                Text("Vergleich")
+                Text("Technik")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }

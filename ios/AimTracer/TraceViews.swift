@@ -1,14 +1,18 @@
 import SwiftUI
 
 struct TraceCard: View {
+    @EnvironmentObject private var axisDisplay: AxisDisplayPreferences
     let shot: ShotCapture?
     let liveSamples: [LiveMotionSample]
 
     private var points: [TracePoint] {
         if let shot {
-            MotionAnalysis.trace(for: shot)
+            MotionAnalysis.trace(for: shot, axes: axisDisplay.configuration)
         } else {
-            MotionAnalysis.liveTrace(for: liveSamples)
+            MotionAnalysis.liveTrace(
+                for: liveSamples,
+                axes: axisDisplay.configuration
+            )
         }
     }
 

@@ -6,7 +6,7 @@ namespace AimTracerProtocol {
 
 constexpr uint8_t kProtocolVersion = 1;
 constexpr uint8_t kFirmwareMajor = 0;
-constexpr uint8_t kFirmwareMinor = 5;
+constexpr uint8_t kFirmwareMinor = 6;
 constexpr size_t kPacketSize = 20;
 
 constexpr char kServiceUuid[] = "7B8A0001-6D5B-4F0D-9C6A-3E0D6C0A1000";

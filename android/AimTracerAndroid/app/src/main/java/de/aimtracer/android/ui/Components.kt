@@ -28,6 +28,8 @@ import de.aimtracer.android.analysis.MotionAnalysis
 import de.aimtracer.android.analysis.SessionTrend
 import de.aimtracer.android.analysis.ShotMetrics
 import de.aimtracer.android.analysis.ShotStanding
+import de.aimtracer.android.analysis.TechniqueProgressPoint
+import de.aimtracer.android.analysis.AxisDisplayConfiguration
 import de.aimtracer.android.analysis.TracePoint
 import de.aimtracer.android.model.LiveMotionSample
 import de.aimtracer.android.model.ShotCapture
@@ -61,12 +63,13 @@ fun SectionTitle(title: String, subtitle: String? = null) {
 fun TraceCard(
     shot: ShotCapture?,
     liveSamples: List<LiveMotionSample>,
+    axes: AxisDisplayConfiguration,
     modifier: Modifier = Modifier
 ) {
     val points = if (shot != null) {
-        MotionAnalysis.trace(shot)
+        MotionAnalysis.trace(shot, axes)
     } else {
-        MotionAnalysis.liveTrace(liveSamples)
+        MotionAnalysis.liveTrace(liveSamples, axes)
     }
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -216,24 +219,24 @@ fun MetricTile(
 }
 
 @Composable
-fun LiveStandingCard(standing: ShotStanding, shotCount: Int) {
+fun LiveStandingCard(standing: ShotStanding) {
     Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
         Column(Modifier.padding(16.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column {
                     Text(
-                        "Einordnung in dieser Session",
+                        "Technikindex dieses Schusses",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        "Vergleich mit $shotCount Schüssen",
+                        "50 entspricht deiner persönlichen Referenz",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Text(
-                    "#${standing.overallRank}",
+                    decimal(standing.techniqueIndex, 0),
                     color = MaterialTheme.colorScheme.primary,
                     fontSize = 23.sp,
                     fontWeight = FontWeight.Bold
@@ -241,22 +244,19 @@ fun LiveStandingCard(standing: ShotStanding, shotCount: Int) {
             }
             Spacer(Modifier.height(10.dp))
             Row(Modifier.fillMaxWidth()) {
-                SmallRank(
+                SmallScore(
                     "Ruhig halten",
-                    standing.holdRank,
-                    shotCount,
+                    standing.holdScore,
                     Modifier.weight(1f)
                 )
-                SmallRank(
+                SmallScore(
                     "Abzug",
-                    standing.triggerRank,
-                    shotCount,
+                    standing.triggerScore,
                     Modifier.weight(1f)
                 )
-                SmallRank(
+                SmallScore(
                     "Nachhalten",
-                    standing.followThroughRank,
-                    shotCount,
+                    standing.followThroughScore,
                     Modifier.weight(1f)
                 )
             }
@@ -265,10 +265,9 @@ fun LiveStandingCard(standing: ShotStanding, shotCount: Int) {
 }
 
 @Composable
-private fun SmallRank(
+private fun SmallScore(
     title: String,
-    rank: Int,
-    count: Int,
+    value: Double,
     modifier: Modifier = Modifier
 ) {
     Column(modifier) {
@@ -278,7 +277,7 @@ private fun SmallRank(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            "$rank/$count",
+            decimal(value, 0),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
@@ -333,6 +332,60 @@ fun SessionTrendChart(
             Legend("Halten", TraceMint)
             Legend("Abzug", TraceOrange)
             Legend("Nachhalten", TraceBlue)
+        }
+    }
+}
+
+@Composable
+fun TechniqueProgressChart(
+    points: List<TechniqueProgressPoint>,
+    modifier: Modifier = Modifier
+) {
+    val visible = points.takeLast(12)
+    Column(modifier) {
+        Canvas(Modifier.fillMaxWidth().height(190.dp)) {
+            val baselineY = size.height * 0.5f
+            drawLine(
+                Color.Gray.copy(alpha = 0.55f),
+                Offset(0f, baselineY),
+                Offset(size.width, baselineY),
+                strokeWidth = 2f
+            )
+            if (visible.isEmpty()) return@Canvas
+            val gap = 8f
+            val slot = size.width / visible.size
+            val barWidth = (slot - gap).coerceAtLeast(5f)
+            visible.forEachIndexed { index, point ->
+                val left = slot * index + (slot - barWidth) / 2f
+                val height = size.height *
+                    (point.techniqueIndex.coerceIn(0.0, 100.0) / 100.0).toFloat()
+                drawRoundRect(
+                    color = if (point.techniqueIndex >= 50) TraceMint else TraceOrange,
+                    topLeft = Offset(left, size.height - height),
+                    size = androidx.compose.ui.geometry.Size(barWidth, height),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(5f, 5f)
+                )
+            }
+        }
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                "älteste",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                "50 = persönliche Referenz",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                "neueste",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

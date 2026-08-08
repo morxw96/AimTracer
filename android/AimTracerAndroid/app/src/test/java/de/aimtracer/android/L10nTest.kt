@@ -9,6 +9,14 @@ class L10nTest {
     fun englishTranslatesFixedAndDynamicAppText() {
         withLocale(Locale.ENGLISH) {
             assertEquals("Settings", L10n.text("Kalibrierung"))
+            assertEquals(
+                "Invert X axis",
+                L10n.text("X-Achse invertieren")
+            )
+            assertEquals(
+                "Invert Y axis",
+                L10n.text("Y-Achse invertieren")
+            )
             assertEquals("Dry fire", L10n.text("Trockentraining"))
             assertEquals("Packet 27", L10n.text("Paket 27"))
             assertEquals(

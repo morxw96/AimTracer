@@ -15,10 +15,17 @@ enum SessionExportError: LocalizedError {
 enum SessionExporter {
     static func makeExcelCSV(
         session: TrainingSession,
-        previousSessions: [TrainingSession]
+        allSessions: [TrainingSession]
     ) throws -> URL {
         guard !session.shots.isEmpty else { throw SessionExportError.noShots }
-        let summary = SessionAnalysis.summary(for: session)
+        let summary = SessionAnalysis.summary(
+            for: session,
+            allSessions: allSessions
+        )
+        let previousSessions = SessionAnalysis.previousComparableSessions(
+            for: session,
+            in: allSessions
+        )
         let comparison = SessionAnalysis.comparison(
             for: session,
             previousSessions: previousSessions
@@ -37,6 +44,18 @@ enum SessionExporter {
             [
                 "Meyton-Gesamtergebnis",
                 session.meytonScore.map(score) ?? ""
+            ],
+            ["Technikindex", number(summary.techniqueIndex, digits: 1)],
+            ["Technik Halten (30 %)", number(summary.holdScore, digits: 1)],
+            ["Technik Abzug (50 %)", number(summary.triggerScore, digits: 1)],
+            [
+                "Technik Nachhalten (20 %)",
+                number(summary.followThroughScore, digits: 1)
+            ],
+            [
+                "Baseline",
+                "\(summary.baseline.sourceSessionCount)/"
+                    + "\(summary.baseline.targetSessionCount) Sessions"
             ],
             [],
             [
@@ -74,7 +93,7 @@ enum SessionExporter {
                 "Geräte-ID",
                 "Zeit",
                 "Gesamtrang",
-                "Vergleichsindex",
+                "Technikindex",
                 "Ruhig halten (°/s RMS)",
                 "Rang Halten",
                 "Abzugsverhalten (°/s RMS)",
@@ -93,7 +112,7 @@ enum SessionExporter {
                 "\(standing.shot.deviceShotID)",
                 timeFormatter.string(from: standing.shot.receivedAt),
                 "\(standing.overallRank)",
-                number(standing.comparisonIndex, digits: 1),
+                number(standing.techniqueIndex, digits: 1),
                 number(standing.metrics.holdRMS),
                 "\(standing.holdRank)",
                 number(standing.metrics.triggerRMS),
@@ -111,8 +130,9 @@ enum SessionExporter {
             [
                 "Hinweis",
                 "Niedrigere RMS-Werte bedeuten weniger Winkelbewegung. "
-                    + "Rang und Vergleichsindex beziehen sich nur auf die "
-                    + "Schüsse dieser Session und sind keine Ringzahl."
+                    + "Der Technikindex nutzt die persönliche Baseline "
+                    + "(Halten 30 %, Abzug 50 %, Nachhalten 20 %) und ist "
+                    + "keine Ringzahl."
             ]
         ]
 
@@ -131,7 +151,7 @@ enum SessionExporter {
 
     static func makePDF(
         session: TrainingSession,
-        previousSessions: [TrainingSession]
+        allSessions: [TrainingSession]
     ) throws -> URL {
         guard !session.shots.isEmpty else { throw SessionExportError.noShots }
         let url = try exportURL(
@@ -141,7 +161,7 @@ enum SessionExporter {
         )
         let report = PDFSessionReport(
             session: session,
-            previousSessions: previousSessions
+            allSessions: allSessions
         )
         try report.write(to: url)
         return url
@@ -271,11 +291,21 @@ private struct RawMountingMetadata: Encodable {
     let boardOrientation =
         "PCB underside up; component and IMU side down; USB-C toward shooter"
     let rawSampleAxes = "Unmodified LSM6DS3TR-C sensor coordinates"
-    let analysisAxes = [
-        "roll": "gy",
-        "horizontalRight": "-gz",
-        "verticalUp": "gx"
-    ]
+    let analysisAxes: [String: String]
+    let displayInversion: [String: Bool]
+
+    init() {
+        let axes = AxisDisplayPreferences.storedConfiguration
+        analysisAxes = [
+            "roll": "gx",
+            "horizontalRight": axes.invertXAxis ? "-gz" : "+gz",
+            "verticalUp": axes.invertYAxis ? "-gy" : "+gy"
+        ]
+        displayInversion = [
+            "x": axes.invertXAxis,
+            "y": axes.invertYAxis
+        ]
+    }
 }
 
 private struct RawTrainingSession: Encodable {
@@ -366,7 +396,7 @@ private struct RawMotionSample: Encodable {
 
 private struct PDFSessionReport {
     let session: TrainingSession
-    let previousSessions: [TrainingSession]
+    let allSessions: [TrainingSession]
 
     private let page = CGRect(x: 0, y: 0, width: 595.2, height: 841.8)
     private let margin: CGFloat = 36
@@ -398,7 +428,14 @@ private struct PDFSessionReport {
 
     private func drawOverview(in rendererContext: UIGraphicsPDFRendererContext) {
         rendererContext.beginPage()
-        let summary = SessionAnalysis.summary(for: session)
+        let summary = SessionAnalysis.summary(
+            for: session,
+            allSessions: allSessions
+        )
+        let previousSessions = SessionAnalysis.previousComparableSessions(
+            for: session,
+            in: allSessions
+        )
         let comparison = SessionAnalysis.comparison(
             for: session,
             previousSessions: previousSessions
@@ -543,6 +580,23 @@ private struct PDFSessionReport {
             )
         }
 
+        drawText(
+            L10n.format(
+                "Technikindex: %@ / 100  •  Baseline: %d/%d Sessions",
+                Self.number(summary.techniqueIndex, digits: 1),
+                summary.baseline.sourceSessionCount,
+                summary.baseline.targetSessionCount
+            ),
+            in: CGRect(
+                x: margin,
+                y: 666,
+                width: page.width - margin * 2,
+                height: 20
+            ),
+            font: .boldSystemFont(ofSize: 10),
+            color: accent
+        )
+
         let meytonResult = session.meytonScore.map {
             L10n.format(
                 "Meyton-Gesamtergebnis: %@ Ringe",
@@ -563,7 +617,7 @@ private struct PDFSessionReport {
         drawText(
             L10n.text(
                 "AimTracer misst relative Winkelbewegung; RMS, Rang und "
-                    + "Vergleichsindex sind keine Ringzahl."
+                    + "Technikindex sind keine Ringzahl."
             ),
             in: CGRect(
                 x: margin,
@@ -763,12 +817,15 @@ private struct PDFSessionReport {
     private func drawShotTable(
         in rendererContext: UIGraphicsPDFRendererContext
     ) {
-        let standings = SessionAnalysis.summary(for: session).standings
+        let standings = SessionAnalysis.summary(
+            for: session,
+            allSessions: allSessions
+        ).standings
         let columns: [(String, CGFloat)] = [
             ("Nr.", 25),
             ("Zeit", 58),
             ("Rang", 40),
-            ("Index", 55),
+            ("Technik", 55),
             ("Halten", 68),
             ("Abzug", 68),
             ("Nachhalten", 68),
@@ -825,7 +882,7 @@ private struct PDFSessionReport {
                             from: standing.shot.receivedAt
                         ),
                         "\(standing.overallRank)",
-                        Self.number(standing.comparisonIndex, digits: 1),
+                        Self.number(standing.techniqueIndex, digits: 1),
                         Self.number(standing.metrics.holdRMS, digits: 2),
                         Self.number(standing.metrics.triggerRMS, digits: 2),
                         Self.number(

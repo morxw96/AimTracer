@@ -53,7 +53,8 @@ struct LiveView: View {
                     if let session = sessions.activeSession {
                         LiveShotStandingCard(
                             shot: shot,
-                            session: session
+                            session: session,
+                            allSessions: sessions.sessions
                         )
                     }
                 }
@@ -296,9 +297,13 @@ private struct SessionSetupView: View {
 private struct LiveShotStandingCard: View {
     let shot: ShotCapture
     let session: TrainingSession
+    let allSessions: [TrainingSession]
 
     private var standing: ShotStanding? {
-        SessionAnalysis.summary(for: session).standings.first {
+        SessionAnalysis.summary(
+            for: session,
+            allSessions: allSessions
+        ).standings.first {
             $0.shot.id == shot.id
         }
     }
@@ -308,46 +313,45 @@ private struct LiveShotStandingCard: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Einordnung in dieser Session")
+                        Text("Technikindex dieses Schusses")
                             .font(.headline)
                         Text(
-                            L10n.format(
-                                session.shots.count == 1
-                                    ? "Vergleich mit %d Schuss"
-                                    : "Vergleich mit %d Schüssen",
-                                session.shots.count
+                            L10n.text(
+                                "50 entspricht deiner persönlichen Referenz"
                             )
                         )
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Text("#\(standing.overallRank)")
+                    Text(
+                        standing.techniqueIndex.formatted(
+                            .number.precision(.fractionLength(0))
+                        )
+                    )
                         .font(.title2.bold().monospacedDigit())
                         .foregroundStyle(.mint)
                 }
 
                 HStack {
-                    rank(
+                    score(
                         "Ruhig halten",
-                        standing.holdRank,
-                        count: session.shots.count
+                        standing.holdScore
                     )
-                    rank(
+                    score(
                         "Abzug",
-                        standing.triggerRank,
-                        count: session.shots.count
+                        standing.triggerScore
                     )
-                    rank(
+                    score(
                         "Nachhalten",
-                        standing.followThroughRank,
-                        count: session.shots.count
+                        standing.followThroughScore
                     )
                 }
                 if session.shots.count < 3 {
                     Text(
                         L10n.text(
-                            "Die Rangfolge wird ab drei Schüssen aussagekräftiger."
+                            "Einlernphase: 50 bleibt die neutrale Referenz, "
+                                + "bis genügend Sessions vorliegen."
                         )
                     )
                     .font(.caption2)
@@ -357,6 +361,17 @@ private struct LiveShotStandingCard: View {
             .padding()
             .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18))
         }
+    }
+
+    private func score(_ title: String, _ value: Double) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(L10n.text(title))
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text(value.formatted(.number.precision(.fractionLength(0))))
+                .font(.headline.monospacedDigit())
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func rank(_ title: String, _ rank: Int, count: Int) -> some View {
