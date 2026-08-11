@@ -34,7 +34,6 @@ Das MVP enthält:
 - automatisches nRF52840-System-OFF nach zwei Stunden Inaktivität im Akkubetrieb,
 - automatische deutsche und englische Lokalisierung von Apps,
   Statusmeldungen, CSV-Tabellen und PDF-Berichten anhand der Handysprache,
-- ein `by Moritz Wenzel`-Credit in den Einstellungen.
 
 ## Projektstruktur
 
