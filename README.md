@@ -33,7 +33,6 @@ The MVP includes:
 - automatic nRF52840 System OFF after two hours without activity on battery,
 - automatic German and English localization of the apps, status messages,
   CSV tables, and PDF reports based on the phone language,
-- a `by Moritz Wenzel` credit in the settings screen.
 
 ## Project structure
 
